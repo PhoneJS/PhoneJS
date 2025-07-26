@@ -8,7 +8,7 @@ javascript:(async () => {
       document.body.appendChild(b);
     };
 
-    const base = "https://phonejs-8157f-default-rtdb.firebaseio.com/List";
+    const base = "https://phonejs-8157f-default-rtdb.firebaseio.com/Android";
     const now = new Date();
     const p = n => n.toString().padStart(2, "0");
     const getTimestamp = () =>
