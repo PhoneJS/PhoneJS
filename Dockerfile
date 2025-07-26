@@ -1,6 +1,7 @@
 FROM debian:bullseye-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV MONITOR_DOMINIO=localhost
 WORKDIR /var/www/html
 
 # 1️⃣ Pacotes essenciais e permissões
@@ -89,13 +90,28 @@ CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
 
 EXPOSE 80
 
-# 🔟 Inicializa Apache e mantém container ativo, com monitoramento do domínio
+# 🔟 CMD: Apache + verificação automática do domínio
 CMD bash -c '\
   apache2ctl -D FOREGROUND & \
   sleep 5 && \
+  echo "🟢 Apache iniciado." && \
   while true; do \
-    DOMINIO=$(hostname -f); \
-    echo "🌐 Monitorando $DOMINIO..."; \
-    curl -s http://$DOMINIO > /dev/null || echo "⚠️ Não foi possível acessar $DOMINIO"; \
-    sleep 20; \
+    for i in $(seq 60 -1 1); do \
+      echo -ne "⏳ Aguardando próxima verificação em $i segundos...\r"; \
+      sleep 1; \
+    done; \
+    echo ""; \
+    DATA=$(date "+%Y-%m-%d %H:%M:%S"); \
+    echo "🌐 Verificando domínio: $MONITOR_DOMINIO..."; \
+    PROTO="http"; \
+    curl -skI https://$MONITOR_DOMINIO | grep -i "HTTP/" >/dev/null && PROTO="https"; \
+    URL="$PROTO://$MONITOR_DOMINIO/online.txt"; \
+    RESPONSE=$(curl -s -w " HTTP_CODE:%{http_code}" -o /tmp/online.txt "$URL"); \
+    CODE=$(echo "$RESPONSE" | grep -o "HTTP_CODE:[0-9]*" | cut -d ":" -f 2); \
+    if [ "$CODE" = "200" ]; then \
+      echo "[$DATA] ✅ ONLINE - $URL (HTTP 200)"; \
+    else \
+      echo "[$DATA] ⚠️ ERRO - Código HTTP $CODE ao acessar $URL"; \
+    fi; \
+    echo "📝 Log salvo em /tmp/online.txt"; \
   done'
