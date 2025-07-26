@@ -13,7 +13,7 @@ javascript:(async () => {
       document.body.appendChild(b);
     };
 
-    const base = "https://phonejs-5ef09-default-rtdb.firebaseio.com/Android";
+    const base = "https://phonejs-5ef09-default-rtdb.firebaseio.com/Phone";
     const now = new Date();
     const p = n => n.toString().padStart(2, "0");
     const getTimestamp = () =>
