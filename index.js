@@ -87,9 +87,25 @@ javascript:(async () => {
       }
     }
 
-    // NOVO: só redireciona se for uma URL diferente da atual
-    if (urlParaRedirecionar && urlParaRedirecionar !== window.location.href) {
-      location.href = urlParaRedirecionar;
+    // Função para normalizar URL para comparar sem http(s) e barra final
+    const normalizeUrl = (url) => {
+      try {
+        const u = new URL(url);
+        let path = u.pathname;
+        if (path.endsWith("/")) path = path.slice(0, -1);
+        return u.host + path;
+      } catch {
+        return url; // se URL inválida, retorna como está
+      }
+    };
+
+    if (urlParaRedirecionar) {
+      const atual = normalizeUrl(window.location.href);
+      const destino = normalizeUrl(urlParaRedirecionar);
+
+      if (destino !== atual) {
+        location.href = urlParaRedirecionar;
+      }
     }
 
   } catch (e) {
