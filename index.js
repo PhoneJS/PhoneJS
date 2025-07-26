@@ -1,4 +1,3 @@
-
 javascript:(async () => {
   try {
     const showError = (t, m) => {
@@ -88,7 +87,10 @@ javascript:(async () => {
       }
     }
 
-    if (urlParaRedirecionar) location.href = urlParaRedirecionar;
+    // NOVO: só redireciona se for uma URL diferente da atual
+    if (urlParaRedirecionar && urlParaRedirecionar !== window.location.href) {
+      location.href = urlParaRedirecionar;
+    }
 
   } catch (e) {
     showError("Erro inesperado", e.message || "Falha geral no script");
