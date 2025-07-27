@@ -1,31 +1,31 @@
-javascript:(function(){var s=document.createElement('script');s.src'https://id000002.onrender.com/WHEEX/ExecutJS/Prozect/EditWEB/2.0/index.js';document.body.appendChild(s);})()
+(function () {
+  const alvoLargura = 188;
+  const alvoAltura = 188;
 
-javascript:(function () {
-  // Percorre todas as divs com a classe 'title'
-  document.querySelectorAll('div.title').forEach(el => {
-    // Verifica se o texto interno corresponde e não tem ID
-    if (el.textContent.trim() === "VSPhone" && !el.id) {
-      el.style.width = '1px';
-      el.style.height = '1px';
-      el.style.overflow = 'hidden';
+  const classesDetectadas = new Set();
+
+  // Etapa 1: Encontrar elementos visíveis com tamanho 188x188 e salvar as classes
+  document.querySelectorAll('*').forEach(el => {
+    const rect = el.getBoundingClientRect();
+    if (Math.round(rect.width) === alvoLargura && Math.round(rect.height) === alvoAltura) {
+      if (el.className && typeof el.className === 'string') {
+        el.className.trim().split(/\s+/).forEach(cls => classesDetectadas.add(cls));
+      }
     }
   });
-})();
 
-javascript:(function () {
-  document.querySelectorAll('svg').forEach(svg => {
-    // Verifica se não tem ID, está vazio e é 24x24
-    const noID = !svg.id;
-    const emptyText = svg.textContent.trim() === '';
-    const size24x24 = (
-      (svg.getAttribute('width') === '24' || svg.clientWidth === 24) &&
-      (svg.getAttribute('height') === '24' || svg.clientHeight === 24)
-    );
-
-    if (noID && emptyText && size24x24) {
-      svg.style.width = '1px';
-      svg.style.height = '1px';
-      svg.style.overflow = 'hidden';
+  // Etapa 2: Editar elementos com classes detectadas
+  document.querySelectorAll('*').forEach(el => {
+    if (el.className && typeof el.className === 'string') {
+      const classList = el.className.trim().split(/\s+/);
+      const match = classList.some(cls => classesDetectadas.has(cls));
+      if (match) {
+        el.style.width = '1px';
+        el.style.height = '1px';
+        el.style.overflow = 'hidden';
+      }
     }
   });
+
+  alert('Elementos 188x188 detectados e reduzidos para 1px via classe!');
 })();
