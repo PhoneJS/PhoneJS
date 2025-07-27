@@ -6,7 +6,6 @@ modificarPorTamanhoId('48x48', 'ocultar');
 
 
 
-
 function modificarPorTamanhoId(tamanhoString, acao = 'destacar') {
   const match = tamanhoString.match(/^(\d+)x(\d+)$/i);
   if (!match) {
@@ -15,6 +14,7 @@ function modificarPorTamanhoId(tamanhoString, acao = 'destacar') {
   }
 
   const [largura, altura] = match.slice(1).map(Number);
+  const margemErro = 1; // margem para evitar erro por arredondamento
   const elementos = Array.from(document.querySelectorAll('body *'));
   let afetados = 0;
 
@@ -52,11 +52,15 @@ function modificarPorTamanhoId(tamanhoString, acao = 'destacar') {
     const rect = el.getBoundingClientRect();
     const w = Math.round(rect.width);
     const h = Math.round(rect.height);
-    if (w === largura && h === altura) {
+
+    const larguraMatch = Math.abs(w - largura) <= margemErro;
+    const alturaMatch = Math.abs(h - altura) <= margemErro;
+
+    if (larguraMatch && alturaMatch && el.offsetParent !== null) {
       acaoFunc(el);
       afetados++;
     }
   });
 
-  alert(`✅ ${afetados} elemento(s) com tamanho ${largura}x${altura} ${acao}(s)`);
+  alert(`✅ ${afetados} elemento(s) com tamanho aproximadamente ${largura}x${altura} ${acao}(s)`);
 }
