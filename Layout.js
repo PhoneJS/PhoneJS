@@ -1,146 +1,205 @@
-javascript:(function () {
-  const STORAGE_KEY = 'historico_elementos_pag';
-  const DOMINIO = location.hostname;
+(function () {
+  const oldMenu = document.getElementById('debug-menu');
+  if (oldMenu) oldMenu.remove();
+  const oldToggle = document.getElementById('menu-toggle');
+  if (oldToggle) oldToggle.remove();
 
-  const statusExecucao = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-  if (statusExecucao[DOMINIO]?.executado) {
-    console.log('⚠️ Execução já feita nesse domínio.');
-  }
+  const seen = new Set();
+  const menu = document.createElement('div');
+  menu.id = 'debug-menu';
+  Object.assign(menu.style, {
+    position: 'fixed', top: '10px', right: '10px', width: '90vw', maxWidth: '300px',
+    background: 'rgba(255,255,255,0.95)', color: 'black', zIndex: 99999, padding: '10px',
+    maxHeight: '80vh', overflowY: 'auto', fontSize: '12px', borderRadius: '8px',
+    boxShadow: '0 0 10px gray', backdropFilter: 'blur(4px)'
+  });
+  menu.innerHTML = '<b>🧠 Elementos Detectados</b><br><br>';
 
-  const oldOverlay = document.getElementById('floating-black-overlay');
-  if (oldOverlay) oldOverlay.remove();
-
-  if (!statusExecucao[DOMINIO]?.executado) {
-    const overlay = document.createElement('div');
-    overlay.id = 'floating-black-overlay';
-    overlay.style = `
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background-color: #000; opacity: 1; z-index: 999999;
-      display: flex; justify-content: center; align-items: center;
-    `;
-    overlay.innerHTML = `<div style="color:white;font-size:18px;font-family:sans-serif;text-align:center;">⏳ Analisando página...</div>`;
-    document.body.appendChild(overlay);
-  }
-
-  const tamanhosAlvo = [
-    { largura: 188, altura: 188, acao: 'ocultar' },
-    { largura: 24, altura: 24, acao: 'ocultar' },
-    { largura: 75, altura: 50, acao: 'ocultar' }
-  ];
-
-  const margemErro = 1;
-  const elementosModificados = new Set();
-  const historico = [];
-
-  const acoes = {
-    ocultar: el => el.style.setProperty('display', 'none', 'important'),
-    centralizar: el => Object.assign(el.style, {
-      position: 'fixed', top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)', zIndex: '9999'
-    }),
-    ajustar: el => Object.assign(el.style, {
-      width: 'auto', height: 'auto',
-      maxWidth: '100vw', maxHeight: '100vh'
-    }),
-    destacar: el => el.style.setProperty('outline', '3px solid red', 'important')
+  const closeBtn = document.createElement('button');
+  closeBtn.innerText = '✖';
+  Object.assign(closeBtn.style, {
+    position: 'absolute', top: '5px', right: '5px',
+    background: 'red', color: 'white', border: 'none',
+    borderRadius: '4px', padding: '2px 5px', cursor: 'pointer'
+  });
+  closeBtn.onclick = () => {
+    menu.remove();
+    toggleBtn.style.display = 'flex';
   };
+  menu.appendChild(closeBtn);
 
-  function registrarHistorico(el, w, h, acao = 'nenhuma') {
-    const key = `${el.tagName}|${el.id || ''}|${el.className || ''}|${w}x${h}`;
-    if (elementosModificados.has(key)) return;
+  document.body.appendChild(menu);
 
-    elementosModificados.add(key);
-    historico.push({
-      tag: el.tagName,
-      id: el.id || null,
-      classes: el.className || null,
-      largura: w,
-      altura: h,
-      acao: acao,
-      hora: new Date().toLocaleString()
-    });
-  }
+  const toggleBtn = document.createElement('div');
+  toggleBtn.id = 'menu-toggle';
+  toggleBtn.innerText = '📋';
+  Object.assign(toggleBtn.style, {
+    position: 'fixed', bottom: '20px', left: '20px', width: '40px', height: '40px',
+    background: 'black', color: 'white', borderRadius: '8px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 99998, cursor: 'move'
+  });
 
-  function salvarHistoricoFinal() {
-    const dados = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    dados[DOMINIO] = dados[DOMINIO] || {};
-    dados[DOMINIO].executado = true;
-    dados[DOMINIO].historico = dados[DOMINIO].historico || [];
-    dados[DOMINIO].historico.push(...historico);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
-    console.log('✅ Histórico salvo:', historico.length, 'ações.');
-  }
+  let isDragging = false, offsetX, offsetY;
+  toggleBtn.onmousedown = e => {
+    isDragging = true;
+    offsetX = e.clientX - toggleBtn.getBoundingClientRect().left;
+    offsetY = e.clientY - toggleBtn.getBoundingClientRect().top;
+  };
+  document.onmousemove = e => {
+    if (!isDragging) return;
+    toggleBtn.style.left = (e.clientX - offsetX) + 'px';
+    toggleBtn.style.top = (e.clientY - offsetY) + 'px';
+  };
+  document.onmouseup = () => { isDragging = false; };
+  toggleBtn.onclick = () => {
+    document.body.appendChild(menu);
+    toggleBtn.style.display = 'none';
+  };
+  document.body.appendChild(toggleBtn);
 
-  function aplicarModificacoes() {
-    const elementos = Array.from(document.querySelectorAll('body *'));
-    let encontrou = false;
+  let count = 1;
 
-    elementos.forEach(el => {
-      if (!(el.offsetWidth > 0 && el.offsetHeight > 0)) return;
-
+  function renderElements() {
+    const elems = Array.from(document.body.getElementsByTagName('*'));
+    elems.forEach(el => {
       const rect = el.getBoundingClientRect();
-      const w = Math.round(rect.width);
-      const h = Math.round(rect.height);
+      const area = rect.width * rect.height;
+      if (area < 100) return;
 
-      let acaoAplicada = 'nenhuma';
+      const id = el.id || '__no_id__';
+      const key = el.tagName + '::' + id + '::' + Math.round(rect.width) + 'x' + Math.round(rect.height);
+      if (seen.has(key)) return;
+      seen.add(key);
 
-      tamanhosAlvo.forEach(tam => {
-        const larguraMatch = Math.abs(w - tam.largura) <= margemErro;
-        const alturaMatch = Math.abs(h - tam.altura) <= margemErro;
+      const tag = el.tagName;
+      const idLabel = el.id ? ('#' + el.id) : '(sem id)';
 
-        if (larguraMatch && alturaMatch) {
-          const acaoFunc = acoes[tam.acao] || acoes.destacar;
-          try { acaoFunc(el); } catch {}
-          try { if (el.id) acaoFunc(document.getElementById(el.id)); } catch {}
-          try {
-            const classes = el.className?.split(/\s+/).filter(Boolean);
-            if (classes?.length) {
-              classes.forEach(cls => {
-                document.querySelectorAll('.' + cls).forEach(e => {
-                  try { acaoFunc(e); } catch {}
-                });
-              });
-            }
-          } catch {}
+      const item = document.createElement('div');
+      item.style.marginBottom = '8px';
+      item.style.borderBottom = '1px solid #ccc';
+      item.innerHTML = `<b>#${count++}</b> - Tag: ${tag} ${idLabel} [${Math.round(rect.width)}×${Math.round(rect.height)}] <br>`;
 
-          acaoAplicada = tam.acao;
-          encontrou = true;
-        }
+      const btn1 = document.createElement('button');
+      btn1.innerText = '🕶️ Ocultar';
+      btn1.onclick = () => { el.style.display = 'none'; };
+
+      const btn2 = document.createElement('button');
+      btn2.innerText = '🎯 Centralizar';
+      btn2.onclick = () => {
+        el.style.position = 'fixed';
+        el.style.top = '50%';
+        el.style.left = '50%';
+        el.style.transform = 'translate(-50%, -50%)';
+        el.style.zIndex = '9999';
+      };
+
+      const btn3 = document.createElement('button');
+      btn3.innerText = '🧙 Ajustar';
+      btn3.onclick = () => {
+        el.style.maxWidth = '100vw';
+        el.style.maxHeight = '100vh';
+        el.style.width = 'auto';
+        el.style.height = 'auto';
+      };
+
+      [btn1, btn2, btn3].forEach(b => {
+        b.style.margin = '2px';
+        b.style.fontSize = '10px';
       });
 
-      if (acaoAplicada !== 'nenhuma') {
-        registrarHistorico(el, w, h, acaoAplicada);
-      }
+      item.appendChild(btn1);
+      item.appendChild(btn2);
+      item.appendChild(btn3);
+      menu.appendChild(item);
     });
+  }
 
-    if (encontrou) {
-      const overlay = document.getElementById('floating-black-overlay');
-      if (overlay) overlay.remove();
+  renderElements();
+  setInterval(renderElements, 2000); // Atualiza automaticamente
+
+  // ====== Diálogo flutuante de edição ======
+  const dialog = document.createElement('div');
+  dialog.id = 'edit-dialog';
+  Object.assign(dialog.style, {
+    position: 'fixed', top: '50%', left: '50%',
+    transform: 'translate(-50%, -50%)',
+    background: '#fff', padding: '20px', border: '1px solid #000',
+    zIndex: '100000', display: 'none',
+    boxShadow: '0 0 20px rgba(0,0,0,0.4)', borderRadius: '10px'
+  });
+
+  const dialogTitle = document.createElement('h3');
+  dialogTitle.innerText = 'Editar Elemento';
+  dialog.appendChild(dialogTitle);
+
+  const chkOcultar = document.createElement('input');
+  chkOcultar.type = 'checkbox';
+  const lbl1 = document.createElement('label');
+  lbl1.innerText = ' Ocultar';
+  dialog.appendChild(chkOcultar); dialog.appendChild(lbl1); dialog.appendChild(document.createElement('br'));
+
+  const chkCentralizar = document.createElement('input');
+  chkCentralizar.type = 'checkbox';
+  const lbl2 = document.createElement('label');
+  lbl2.innerText = ' Centralizar';
+  dialog.appendChild(chkCentralizar); dialog.appendChild(lbl2); dialog.appendChild(document.createElement('br'));
+
+  const chkAjustar = document.createElement('input');
+  chkAjustar.type = 'checkbox';
+  const lbl3 = document.createElement('label');
+  lbl3.innerText = ' Ajustar';
+  dialog.appendChild(chkAjustar); dialog.appendChild(lbl3); dialog.appendChild(document.createElement('br'));
+
+  const btnAplicar = document.createElement('button');
+  btnAplicar.innerText = 'Atualizar Modificação';
+  btnAplicar.style.marginTop = '10px';
+  dialog.appendChild(btnAplicar);
+
+  const btnFechar = document.createElement('button');
+  btnFechar.innerText = 'Fechar';
+  btnFechar.style.marginLeft = '10px';
+  btnFechar.onclick = () => dialog.style.display = 'none';
+  dialog.appendChild(btnFechar);
+
+  document.body.appendChild(dialog);
+
+  let elementoSelecionado = null;
+
+  // Clique em qualquer parte da tela ativa o modo edição
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#debug-menu') || e.target.closest('#edit-dialog') || e.target === toggleBtn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (elementoSelecionado) elementoSelecionado.style.background = '';
+
+    elementoSelecionado = e.target;
+    elementoSelecionado.style.background = 'rgba(255, 255, 0, 0.3)';
+
+    chkOcultar.checked = false;
+    chkCentralizar.checked = false;
+    chkAjustar.checked = false;
+    dialog.style.display = 'block';
+  }, true);
+
+  btnAplicar.onclick = () => {
+    if (!elementoSelecionado) return;
+
+    if (chkOcultar.checked) elementoSelecionado.style.display = 'none';
+    if (chkCentralizar.checked) {
+      Object.assign(elementoSelecionado.style, {
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)', zIndex: '9999'
+      });
     }
-  }
+    if (chkAjustar.checked) {
+      Object.assign(elementoSelecionado.style, {
+        maxWidth: '100vw', maxHeight: '100vh', width: 'auto', height: 'auto'
+      });
+    }
 
-  // Inicia com aplicação imediata e continua monitorando
-  function iniciarAnalise() {
-    aplicarModificacoes();
-
-    // Observer para alterações DOM
-    const observer = new MutationObserver(() => aplicarModificacoes());
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Aplicação periódica caso falhe algum observer
-    setInterval(() => aplicarModificacoes(), 1500);
-
-    // Salvamento regular de histórico
-    setInterval(() => {
-      if (historico.length > 0) {
-        salvarHistoricoFinal();
-      }
-    }, 5000);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', iniciarAnalise);
-  } else {
-    iniciarAnalise();
-  }
+    dialog.style.display = 'none';
+  };
 })();
