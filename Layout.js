@@ -1,86 +1,153 @@
 javascript:(function () {
-  // Remove antigos menus
-  const oldMenu = document.getElementById('debug-menu');
-  if (oldMenu) oldMenu.remove();
-  const oldToggle = document.getElementById('menu-toggle');
-  if (oldToggle) oldToggle.remove();
+  const STORAGE_KEY = 'historico_elementos_pag';
+  const oldOverlay = document.getElementById('floating-black-overlay');
+  if (oldOverlay) oldOverlay.remove();
 
-  // Tamanhos e ações automáticas
+  const overlay = document.createElement('div');
+  overlay.id = 'floating-black-overlay';
+  overlay.style = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: black; opacity: 0.9; z-index: 999999;
+    display: flex; justify-content: center; align-items: center;
+  `;
+  overlay.innerHTML = `<div style="color:white;font-size:18px;font-family:sans-serif;text-align:center;">⏳ Analisando página...</div>`;
+  document.body.appendChild(overlay);
+
   const tamanhosAlvo = [
     { largura: 188, altura: 188, acao: 'ocultar' },
     { largura: 24, altura: 24, acao: 'ocultar' },
     { largura: 75, altura: 50, acao: 'ocultar' }
   ];
+
   const margemErro = 1;
+  const historico = [];
+  let tentativas = 0;
+  let elementosModificados = 0;
+  const maxTentativas = 10;
+
   const acoes = {
-    ocultar: el => el.style.setProperty('display', 'none', 'important'),
-    centralizar: el => Object.assign(el.style, {
-      position: 'fixed', top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)', zIndex: '9999'
-    }),
-    ajustar: el => Object.assign(el.style, {
-      width: 'auto', height: 'auto',
-      maxWidth: '100vw', maxHeight: '100vh'
-    }),
+    ocultar: el => {
+      el.style.setProperty('display', 'none', 'important');
+    },
+    centralizar: el => {
+      Object.assign(el.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: '9999'
+      });
+    },
+    ajustar: el => {
+      Object.assign(el.style, {
+        width: 'auto',
+        height: 'auto',
+        maxWidth: '100vw',
+        maxHeight: '100vh'
+      });
+    },
     destacar: el => {
-      el.style.outline = '3px solid red';
+      el.style.setProperty('outline', '3px solid red', 'important');
       el.style.transition = 'outline 0.3s';
     }
   };
 
-  // Criar painel invisível (log oculto)
-  const menu = document.createElement('div');
-  menu.id = 'debug-menu';
-  Object.assign(menu.style, {
-    position: 'fixed', top: '10px', right: '10px',
-    width: '90vw', maxWidth: '300px', maxHeight: '80vh',
-    background: 'rgba(255,255,255,0.95)', color: 'black',
-    padding: '10px', fontSize: '12px', overflowY: 'auto',
-    borderRadius: '8px', boxShadow: '0 0 10px gray',
-    backdropFilter: 'blur(4px)', zIndex: '99999',
-    display: 'none' // ← invisível por padrão
-  });
-  menu.innerHTML = '<b>🧠 Elementos Modificados</b><br><br>';
+  function registrarHistorico(el, w, h, acao = 'nenhuma') {
+    historico.push({
+      tag: el.tagName,
+      id: el.id || null,
+      classes: el.className || null,
+      largura: w,
+      altura: h,
+      acao: acao,
+      hora: new Date().toLocaleString()
+    });
+  }
 
-  // Verificação automática
-  const seen = new Set();
-  const elems = Array.from(document.body.getElementsByTagName('*'));
-  let count = 1;
-  elems.forEach(el => {
-    const rect = el.getBoundingClientRect();
-    const w = Math.round(rect.width);
-    const h = Math.round(rect.height);
-    const area = w * h;
-    if (area < 100) return;
+  function salvarHistorico() {
+    const dominio = location.hostname;
+    const dados = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    dados[dominio] = dados[dominio] || [];
+    dados[dominio].push(...historico);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+    console.log('🔍 Histórico salvo com', historico.length, 'entradas.');
+  }
 
-    const key = el.tagName + '::' + (el.id || '') + '::' + w + 'x' + h;
-    if (seen.has(key)) return;
-    seen.add(key);
+  function aplicarModificacoes() {
+    let totalAfetados = 0;
+    const elementos = Array.from(document.querySelectorAll('body *'));
 
-    // Verifica se combina com algum tamanho alvo
-    let acaoAplicada = null;
-    for (const tam of tamanhosAlvo) {
-      const matchL = Math.abs(w - tam.largura) <= margemErro;
-      const matchA = Math.abs(h - tam.altura) <= margemErro;
-      if (matchL && matchA) {
-        (acoes[tam.acao] || acoes.destacar)(el);
-        acaoAplicada = tam.acao;
-        break;
+    elementos.forEach(el => {
+      if (!(el.offsetWidth > 0 && el.offsetHeight > 0)) return;
+
+      const rect = el.getBoundingClientRect();
+      const w = Math.round(rect.width);
+      const h = Math.round(rect.height);
+
+      let acaoAplicada = 'nenhuma';
+
+      tamanhosAlvo.forEach(tam => {
+        const larguraMatch = Math.abs(w - tam.largura) <= margemErro;
+        const alturaMatch = Math.abs(h - tam.altura) <= margemErro;
+
+        if (larguraMatch && alturaMatch) {
+          const acaoFunc = acoes[tam.acao] || acoes.destacar;
+
+          // Tenta várias abordagens para modificar
+          try { acaoFunc(el); } catch {}
+          try { if (el.id) acaoFunc(document.getElementById(el.id)); } catch {}
+          try {
+            const classes = el.className?.split(/\s+/).filter(Boolean);
+            if (classes?.length) {
+              classes.forEach(cls => {
+                document.querySelectorAll('.' + cls).forEach(e => {
+                  try { acaoFunc(e); } catch {}
+                });
+              });
+            }
+          } catch {}
+
+          acaoAplicada = tam.acao;
+          totalAfetados++;
+        }
+      });
+
+      registrarHistorico(el, w, h, acaoAplicada);
+    });
+
+    if (totalAfetados > 0 && elementosModificados === 0) {
+      elementosModificados = totalAfetados;
+      if (observer) observer.disconnect();
+      salvarHistorico();
+      overlay.remove();
+    }
+
+    tentativas++;
+    if (tentativas >= maxTentativas && elementosModificados === 0) {
+      if (observer) observer.disconnect();
+      salvarHistorico();
+      overlay.remove();
+    }
+  }
+
+  let observer;
+
+  const iniciar = () => {
+    aplicarModificacoes();
+    observer = new MutationObserver(() => aplicarModificacoes());
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    const intervalo = setInterval(() => {
+      aplicarModificacoes();
+      if (elementosModificados > 0 || tentativas >= maxTentativas) {
+        clearInterval(intervalo);
       }
-    }
+    }, 2000);
+  };
 
-    // Apenas registra se foi modificável
-    if (acaoAplicada) {
-      const item = document.createElement('div');
-      item.style.marginBottom = '8px';
-      item.style.borderBottom = '1px solid #ccc';
-      item.innerHTML = `<b>#${count++}</b> - Tag: ${el.tagName} ${el.id ? `#${el.id}` : '(sem id)'} [${w}×${h}] → <b>${acaoAplicada}</b>`;
-      menu.appendChild(item);
-    }
-  });
-
-  // Adiciona painel invisível (log técnico)
-  document.body.appendChild(menu);
-
-  // O menu não será exibido ao usuário, mas o log fica no DOM (caso deseje inspecionar depois)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', iniciar);
+  } else {
+    iniciar();
+  }
 })();
