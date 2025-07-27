@@ -1,20 +1,27 @@
 (function () {
-  const alvoLargura = 188;
-  const alvoAltura = 188;
+  const HISTORICO_ALVO = "188x188,50x50"; // ← Defina os tamanhos aqui
+
+  const tamanhosAlvo = HISTORICO_ALVO.split(',').map(t => {
+    const [w, h] = t.split('x').map(n => parseInt(n.trim()));
+    return { largura: w, altura: h };
+  });
 
   const classesDetectadas = new Set();
 
-  // Etapa 1: Encontrar elementos visíveis com tamanho 188x188 e salvar as classes
+  // Etapa 1: Identificar elementos com tamanho correspondente e coletar classes
   document.querySelectorAll('*').forEach(el => {
     const rect = el.getBoundingClientRect();
-    if (Math.round(rect.width) === alvoLargura && Math.round(rect.height) === alvoAltura) {
-      if (el.className && typeof el.className === 'string') {
-        el.className.trim().split(/\s+/).forEach(cls => classesDetectadas.add(cls));
-      }
+    const largura = Math.round(rect.width);
+    const altura = Math.round(rect.height);
+
+    const corresponde = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
+
+    if (corresponde && el.className && typeof el.className === 'string') {
+      el.className.trim().split(/\s+/).forEach(cls => classesDetectadas.add(cls));
     }
   });
 
-  // Etapa 2: Editar elementos com classes detectadas
+  // Etapa 2: Reduzir todos os elementos que tenham as classes detectadas
   document.querySelectorAll('*').forEach(el => {
     if (el.className && typeof el.className === 'string') {
       const classList = el.className.trim().split(/\s+/);
@@ -27,5 +34,5 @@
     }
   });
 
-  alert('Elementos 188x188 detectados e reduzidos para 1px via classe!');
+  alert('Elementos com tamanhos alvo foram reduzidos para 1px via classes!');
 })();
