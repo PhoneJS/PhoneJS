@@ -1,28 +1,21 @@
 javascript:(function () {
-  const STORAGE_KEY = 'historico_elementos_pag'; // chave do localStorage
-
-  // Evita duplicação da tela preta
   const oldOverlay = document.getElementById('floating-black-overlay');
   if (oldOverlay) oldOverlay.remove();
 
-  // Criação da tela preta flutuante
+  // Criar tela preta full
   const overlay = document.createElement('div');
   overlay.id = 'floating-black-overlay';
-  overlay.style.position = 'fixed';
-  overlay.style.top = '0';
-  overlay.style.left = '0';
-  overlay.style.width = '100vw';
-  overlay.style.height = '100vh';
-  overlay.style.backgroundColor = 'black';
-  overlay.style.opacity = '0.9';
-  overlay.style.zIndex = '999999';
-  overlay.style.display = 'flex';
-  overlay.style.justifyContent = 'center';
-  overlay.style.alignItems = 'center';
-  overlay.innerHTML = `<div style="color:white;font-size:18px;font-family:sans-serif;text-align:center;">⏳ Analisando página...</div>`;
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    top: '0', left: '0',
+    width: '100vw', height: '100vh',
+    backgroundColor: 'black',
+    opacity: '0.95',
+    zIndex: '999999',
+  });
   document.body.appendChild(overlay);
 
-  // Lista de tamanhos-alvo e ações
+  // Tamanhos alvo e ações automáticas
   const tamanhosAlvo = [
     { largura: 188, altura: 188, acao: 'ocultar' },
     { largura: 24, altura: 24, acao: 'ocultar' },
@@ -32,8 +25,10 @@ javascript:(function () {
   const acoes = {
     ocultar: el => el.style.setProperty('display', 'none', 'important'),
     centralizar: el => Object.assign(el.style, {
-      position: 'fixed', top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)', zIndex: '9999'
+      position: 'fixed',
+      top: '50%', left: '50%',
+      transform: 'translate(-50%, -50%)',
+      zIndex: '9999'
     }),
     ajustar: el => Object.assign(el.style, {
       width: 'auto', height: 'auto',
@@ -45,35 +40,10 @@ javascript:(function () {
     }
   };
 
-  let elementosModificados = 0;
-  let tentativas = 0;
-  const maxTentativas = 10;
-  const historico = [];
-
-  function registrarHistorico(el, w, h, acao = 'nenhuma') {
-    historico.push({
-      tag: el.tagName,
-      id: el.id || null,
-      classes: el.className || null,
-      largura: w,
-      altura: h,
-      acao: acao,
-      hora: new Date().toLocaleString()
-    });
-  }
-
-  function salvarHistorico() {
-    const dominio = location.hostname;
-    const dados = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    dados[dominio] = dados[dominio] || [];
-    dados[dominio].push(...historico);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
-    console.log('🔍 Histórico salvo com', historico.length, 'entradas.');
-  }
-
-  function aplicarModificacoes() {
-    let totalAfetados = 0;
+  // Processa elementos da página
+  function processarElementos() {
     const elementos = Array.from(document.querySelectorAll('body *'));
+    let modificouAlgum = false;
 
     elementos.forEach(el => {
       if (!(el.offsetWidth > 0 && el.offsetHeight > 0)) return;
@@ -82,57 +52,31 @@ javascript:(function () {
       const w = Math.round(rect.width);
       const h = Math.round(rect.height);
 
-      let acaoAplicada = 'nenhuma';
-
-      tamanhosAlvo.forEach(tam => {
-        const larguraMatch = Math.abs(w - tam.largura) <= margemErro;
-        const alturaMatch = Math.abs(h - tam.altura) <= margemErro;
-
-        if (larguraMatch && alturaMatch) {
-          const acaoFunc = acoes[tam.acao] || acoes.destacar;
+      for (const tam of tamanhosAlvo) {
+        const matchL = Math.abs(w - tam.largura) <= margemErro;
+        const matchA = Math.abs(h - tam.altura) <= margemErro;
+        if (matchL && matchA) {
+          const acaoFunc = acoes[tam.acao] || (() => {});
           acaoFunc(el);
-          acaoAplicada = tam.acao;
-          totalAfetados++;
+          modificouAlgum = true;
+          break;
         }
-      });
-
-      registrarHistorico(el, w, h, acaoAplicada);
+      }
     });
 
-    if (totalAfetados > 0 && elementosModificados === 0) {
-      elementosModificados = totalAfetados;
-      if (observer) observer.disconnect();
-      salvarHistorico();
-      overlay.remove();
-    }
+    return modificouAlgum;
+  }
 
+  let tentativas = 0;
+  const maxTentativas = 10;
+
+  const intervalo = setInterval(() => {
+    const feito = processarElementos();
     tentativas++;
-    if (tentativas >= maxTentativas && elementosModificados === 0) {
-      if (observer) observer.disconnect();
-      salvarHistorico();
-      overlay.remove();
+
+    if (feito || tentativas >= maxTentativas) {
+      clearInterval(intervalo);
+      overlay.remove(); // Remove a tela preta ao finalizar
     }
-  }
-
-  let observer;
-
-  const iniciar = () => {
-    aplicarModificacoes();
-
-    observer = new MutationObserver(() => aplicarModificacoes());
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    const intervalo = setInterval(() => {
-      aplicarModificacoes();
-      if (elementosModificados > 0 || tentativas >= maxTentativas) {
-        clearInterval(intervalo);
-      }
-    }, 2000);
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', iniciar);
-  } else {
-    iniciar();
-  }
+  }, 1000);
 })();
