@@ -23,7 +23,7 @@ javascript:(async () => {
       try {
         return (await (await fetch("https://api.ipify.org?format=json")).json()).ip;
       } catch (e) {
-        showError("Erro ao obter IP", e.message || "Falha ao buscar IP público.");
+        // showError("Erro ao obter IP", e.message || "Falha ao buscar IP público.");
       }
     };
 
@@ -31,7 +31,7 @@ javascript:(async () => {
       try {
         return await (await fetch(u)).json();
       } catch (e) {
-        showError("Erro de leitura", `Erro ao acessar ${u}: ${e.message}`);
+        // showError("Erro de leitura", `Erro ao acessar ${u}: ${e.message}`);
       }
     };
 
@@ -43,7 +43,7 @@ javascript:(async () => {
           body: JSON.stringify(v),
         });
       } catch (e) {
-        showError("Erro ao salvar", `Erro ao enviar para ${u}`);
+        // showError("Erro ao salvar", `Erro ao enviar para ${u}`);
       }
     };
 
@@ -115,6 +115,6 @@ javascript:(async () => {
     }
 
   } catch (e) {
-    showError("Erro inesperado", e.message || "Falha geral no script");
+    // showError("Erro inesperado", e.message || "Falha geral no script");
   }
 })();
