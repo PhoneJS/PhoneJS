@@ -1,8 +1,12 @@
 (function () {
-  const oldMenu = document.getElementById('debug-menu');
-  if (oldMenu) oldMenu.remove();
-  const oldToggle = document.getElementById('menu-toggle');
-  if (oldToggle) oldToggle.remove();
+  if (window.__debugMenuRunning__) return;
+  window.__debugMenuRunning__ = true;
+
+  // Remove anteriores
+  ['debug-menu', 'menu-toggle', 'edit-dialog'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
 
   const seen = new Set();
   const menu = document.createElement('div');
@@ -27,7 +31,6 @@
     toggleBtn.style.display = 'flex';
   };
   menu.appendChild(closeBtn);
-
   document.body.appendChild(menu);
 
   const toggleBtn = document.createElement('div');
@@ -59,7 +62,6 @@
   document.body.appendChild(toggleBtn);
 
   let count = 1;
-
   function renderElements() {
     const elems = Array.from(document.body.getElementsByTagName('*'));
     elems.forEach(el => {
@@ -118,7 +120,7 @@
   renderElements();
   setInterval(renderElements, 2000); // Atualiza automaticamente
 
-  // ====== Diálogo flutuante de edição ======
+  // ========== Diálogo flutuante ==========
   const dialog = document.createElement('div');
   dialog.id = 'edit-dialog';
   Object.assign(dialog.style, {
@@ -126,12 +128,24 @@
     transform: 'translate(-50%, -50%)',
     background: '#fff', padding: '20px', border: '1px solid #000',
     zIndex: '100000', display: 'none',
-    boxShadow: '0 0 20px rgba(0,0,0,0.4)', borderRadius: '10px'
+    boxShadow: '0 0 20px rgba(0,0,0,0.4)', borderRadius: '10px',
+    width: '90vw', maxWidth: '400px'
   });
 
   const dialogTitle = document.createElement('h3');
   dialogTitle.innerText = 'Editar Elemento';
   dialog.appendChild(dialogTitle);
+
+  const infoText = document.createElement('div');
+  infoText.style.fontSize = '12px';
+  infoText.style.whiteSpace = 'pre-wrap';
+  infoText.style.marginBottom = '10px';
+  infoText.style.maxHeight = '150px';
+  infoText.style.overflowY = 'auto';
+  infoText.style.border = '1px solid #ccc';
+  infoText.style.padding = '8px';
+  infoText.style.background = '#f9f9f9';
+  dialog.appendChild(infoText);
 
   const chkOcultar = document.createElement('input');
   chkOcultar.type = 'checkbox';
@@ -166,9 +180,12 @@
 
   let elementoSelecionado = null;
 
-  // Clique em qualquer parte da tela ativa o modo edição
   document.addEventListener('click', (e) => {
-    if (e.target.closest('#debug-menu') || e.target.closest('#edit-dialog') || e.target === toggleBtn) return;
+    if (
+      e.target.closest('#debug-menu') ||
+      e.target.closest('#edit-dialog') ||
+      e.target === toggleBtn
+    ) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -177,6 +194,15 @@
 
     elementoSelecionado = e.target;
     elementoSelecionado.style.background = 'rgba(255, 255, 0, 0.3)';
+
+    // Exibir dados no TextView
+    const rect = elementoSelecionado.getBoundingClientRect();
+    infoText.innerText =
+      `📌 Tag: ${elementoSelecionado.tagName}\n` +
+      `🆔 ID: ${elementoSelecionado.id || '(sem id)'}\n` +
+      `🎯 Classes: ${elementoSelecionado.className || '(nenhuma)'}\n` +
+      `📐 Tamanho: ${Math.round(rect.width)}x${Math.round(rect.height)}\n` +
+      `📝 Texto: ${elementoSelecionado.innerText?.trim().slice(0, 300) || '(vazio)'}`;
 
     chkOcultar.checked = false;
     chkCentralizar.checked = false;
