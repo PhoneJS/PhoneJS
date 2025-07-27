@@ -1,4 +1,4 @@
-<script>
+
 (function () {
   // Lista de tamanhos alvo e a ação que será aplicada
   const tamanhosAlvo = [
@@ -71,4 +71,3 @@
     aplicarAcoesAutomatica();
   }
 })();
-</script>
