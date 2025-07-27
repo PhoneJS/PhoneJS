@@ -1,5 +1,5 @@
 (function () {
-  const HISTORICO_ALVO = "188x188,50x50"; // ← Defina os tamanhos aqui
+  const HISTORICO_ALVO = "188x188,97x24,24x24"; // ← Defina os tamanhos aqui
 
   const tamanhosAlvo = HISTORICO_ALVO.split(',').map(t => {
     const [w, h] = t.split('x').map(n => parseInt(n.trim()));
