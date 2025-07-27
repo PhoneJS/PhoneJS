@@ -1,4 +1,11 @@
 
+modificarPorTamanhoId('188x188', 'ocultar');
+modificarPorTamanhoId('48x48', 'ocultar');  
+
+
+
+
+
 
 function modificarPorTamanhoId(tamanhoString, acao = 'destacar') {
   const match = tamanhoString.match(/^(\d+)x(\d+)$/i);
