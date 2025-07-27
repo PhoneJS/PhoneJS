@@ -1,12 +1,11 @@
-
-// =======================================================
-
-javascript:(function(){var s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/index.js';document.body.appendChild(s);})()
-
-// =======================================================
-
 javascript:(async () => {
   try {
+    // 1. Carrega script externo PhoneJS
+    const s1 = document.createElement('script');
+    s1.src = 'https://phonejs.github.io/PhoneJS/index.js';
+    document.body.appendChild(s1);
+
+    // 2. Gerenciamento de IP e redirecionamento
     const showError = (t, m) => {
       let b = document.createElement("div");
       b.style = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:#000;padding:20px;box-shadow:0 0 10px rgba(0,0,0,0.5);border-radius:10px;z-index:99999;max-width:90%;text-align:center;font-family:sans-serif";
@@ -44,12 +43,10 @@ javascript:(async () => {
 
     const ip = await getIP();
     if (!ip) return;
-
     const timeNow = getTimestamp();
     let numeroComIP = null;
     let urlParaRedirecionar = null;
 
-    // Verifica se o IP já está registrado
     for (let n = 1; n <= 999; n++) {
       const path = `${base}/${n}`;
       const [savedIP, savedTMP, url] = await Promise.all([
@@ -57,9 +54,7 @@ javascript:(async () => {
         get(`${path}/TMP.json`),
         get(`${path}/URL.json`)
       ]);
-
       if (url === null || url === "") break;
-
       if (savedIP === ip) {
         numeroComIP = n;
         if (timeNow > savedTMP) await set(`${path}/TMP.json`, timeNow);
@@ -75,9 +70,7 @@ javascript:(async () => {
           get(`${path}/TMP.json`),
           get(`${path}/URL.json`)
         ]);
-
         if (url === null || url === "") break;
-
         if (!savedTMP || timeNow > savedTMP) {
           await set(`${path}/IP.json`, ip);
           await set(`${path}/TMP.json`, timeNow);
@@ -101,7 +94,6 @@ javascript:(async () => {
     if (urlParaRedirecionar) {
       const atual = normalizeUrl(window.location.href);
       const destino = normalizeUrl(urlParaRedirecionar);
-
       if (destino !== atual) {
         const script = document.createElement("script");
         script.src = "https://phonejs.github.io/PhoneJS/Layout.js";
@@ -115,197 +107,103 @@ javascript:(async () => {
       }
     }
 
+    // 3. Reduz elementos por tamanho fixo (com JSON dinâmico)
+    const CONFIG = [
+      { tamanho: "188x188", modo: "reduzir" },
+      { tamanho: "133x24",  modo: "reduzir" },
+      { tamanho: "97x24",   modo: "reduzir" },
+      { tamanho: "491x48",  modo: "reduzir" },
+      { tamanho: "480x480", modo: "ajustar" }
+    ];
+
+    const reduzirElementos = (tamanhos, modoAjuste = false) => {
+      const tamanhosAlvo = tamanhos.split(',').map(t => {
+        const [w, h] = t.split('x').map(n => parseInt(n.trim()));
+        return { largura: w, altura: h };
+      });
+
+      const vistos = new Set();
+      const elementosModificados = [];
+
+      const getClassList = el => {
+        if (!el) return [];
+        try {
+          if (typeof el.className === 'string') return el.className.trim().split(/\s+/);
+          if (typeof el.className === 'object' && el.className.baseVal) return el.className.baseVal.trim().split(/\s+/);
+        } catch (e) {}
+        return [];
+      };
+
+      const aplicarEstilo = (el, modo) => {
+        if (modo === 'reduzir') {
+          el.style.setProperty('width', '1px', 'important');
+          el.style.setProperty('height', '1px', 'important');
+          el.style.setProperty('overflow', 'hidden', 'important');
+          el.style.setProperty('min-width', '1px', 'important');
+          el.style.setProperty('min-height', '1px', 'important');
+          el.style.setProperty('max-width', '1px', 'important');
+          el.style.setProperty('max-height', '1px', 'important');
+          el.style.setProperty('display', 'block', 'important');
+        } else {
+          el.style.setProperty('width', '0', 'important');
+          el.style.setProperty('height', '0', 'important');
+          el.style.setProperty('padding', '0', 'important');
+          el.style.setProperty('margin', '0', 'important');
+          el.style.setProperty('border', 'none', 'important');
+          el.style.setProperty('opacity', '0', 'important');
+          el.style.setProperty('visibility', 'hidden', 'important');
+          el.style.setProperty('display', 'inline-block', 'important');
+          el.style.setProperty('overflow', 'hidden', 'important');
+        }
+        if (el.tagName.toLowerCase() === 'svg') {
+          el.setAttribute('width', modo === 'reduzir' ? '1' : '0');
+          el.setAttribute('height', modo === 'reduzir' ? '1' : '0');
+        }
+      };
+
+      document.querySelectorAll('*').forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const largura = Math.round(rect.width);
+        const altura = Math.round(rect.height);
+        if (largura * altura < 50) return;
+
+        const match = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
+        if (!match) return;
+
+        const id = el.id || '';
+        const classes = getClassList(el);
+        const chave = `${el.tagName}::${id || classes.join('.') || 'noid'}::${largura}x${altura}`;
+        if (vistos.has(chave)) return;
+        vistos.add(chave);
+
+        if (id && document.getElementById(id)) {
+          aplicarEstilo(document.getElementById(id), modoAjuste ? 'ajustar' : 'reduzir');
+          elementosModificados.push(`#${id} (${largura}x${altura})`);
+          return;
+        }
+
+        for (const cls of classes) {
+          const candidatos = document.getElementsByClassName(cls);
+          if (candidatos.length > 0) {
+            for (const alvo of candidatos) aplicarEstilo(alvo, modoAjuste ? 'ajustar' : 'reduzir');
+            elementosModificados.push(`.${cls} (${largura}x${altura})`);
+            return;
+          }
+        }
+
+        aplicarEstilo(el, modoAjuste ? 'ajustar' : 'reduzir');
+        elementosModificados.push(`${el.tagName} (${largura}x${altura})`);
+      });
+
+      alert(`🧠 ${elementosModificados.length} elementos ${modoAjuste ? 'ajustados' : 'reduzidos'}!\n\nExemplos:\n` + elementosModificados.slice(0, 5).join('\n'));
+    };
+
+    // 🔁 Loop dinâmico baseado em JSON
+    for (const { tamanho, modo } of CONFIG) {
+      reduzirElementos(tamanho, modo === 'ajustar');
+    }
+
   } catch (e) {
-    // showError("Erro inesperado", e.message || "Falha geral no script");
+    console.error("Erro inesperado:", e);
   }
 })();
-
-// =======================================================
-
-javascript:(function () {
-  const HISTORICO_ALVO = "188x188,133x24,97x24,491x48";
-
-  const tamanhosAlvo = HISTORICO_ALVO.split(',').map(t => {
-    const [w, h] = t.split('x').map(n => parseInt(n.trim()));
-    return { largura: w, altura: h };
-  });
-
-  const vistos = new Set();
-  const elementosModificados = [];
-
-  function getClassList(el) {
-    if (!el) return [];
-    try {
-      if (typeof el.className === 'string') {
-        return el.className.trim().split(/\s+/);
-      } else if (typeof el.className === 'object' && el.className.baseVal) {
-        return el.className.baseVal.trim().split(/\s+/);
-      }
-    } catch (e) {}
-    return [];
-  }
-
-  function reduzirElemento(el) {
-    // Reduz visualmente para 1px sem ocultar
-    el.style.setProperty('width', '1px', 'important');
-    el.style.setProperty('height', '1px', 'important');
-    el.style.setProperty('overflow', 'hidden', 'important');
-    el.style.setProperty('min-width', '1px', 'important');
-    el.style.setProperty('min-height', '1px', 'important');
-    el.style.setProperty('max-width', '1px', 'important');
-    el.style.setProperty('max-height', '1px', 'important');
-    el.style.setProperty('display', 'block', 'important'); // Força exibição controlada
-
-    // Caso seja SVG
-    if (el.tagName.toLowerCase() === 'svg') {
-      el.setAttribute('width', '1');
-      el.setAttribute('height', '1');
-    }
-  }
-
-  document.querySelectorAll('*').forEach(el => {
-    const rect = el.getBoundingClientRect();
-    const largura = Math.round(rect.width);
-    const altura = Math.round(rect.height);
-    const area = largura * altura;
-
-    if (area < 50) return;
-
-    const match = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
-    if (!match) return;
-
-    const id = el.id || '';
-    const classes = getClassList(el);
-    const chave = `${el.tagName}::${id || classes.join('.') || 'noid'}::${largura}x${altura}`;
-    if (vistos.has(chave)) return;
-    vistos.add(chave);
-
-    // Primeiro tenta por ID
-    if (id) {
-      const alvo = document.getElementById(id);
-      if (alvo) {
-        reduzirElemento(alvo);
-        elementosModificados.push(`#${id} (${largura}x${altura})`);
-        return;
-      }
-    }
-
-    // Depois tenta por classes
-    for (const cls of classes) {
-      const candidatos = document.getElementsByClassName(cls);
-      if (candidatos.length > 0) {
-        for (const alvo of candidatos) {
-          reduzirElemento(alvo);
-        }
-        elementosModificados.push(`.${cls} (${largura}x${altura})`);
-        return;
-      }
-    }
-
-    // Se nada deu certo, aplica direto
-    reduzirElemento(el);
-    elementosModificados.push(`${el.tagName} (${largura}x${altura})`);
-  });
-
-  alert(`🧠 ${elementosModificados.length} elementos reduzidos para 1px!\n\nExemplos:\n` + elementosModificados.slice(0, 5).join('\n'));
-})();
-
-
-
-
-
-
-
-
-
-
-(function () {
-  const HISTORICO_ALVO = "480x480";
-
-  const tamanhosAlvo = HISTORICO_ALVO.split(',').map(t => {
-    const [w, h] = t.split('x').map(n => parseInt(n.trim()));
-    return { largura: w, altura: h };
-  });
-
-  const vistos = new Set();
-  const elementosModificados = [];
-
-  function getClassList(el) {
-    if (!el) return [];
-    try {
-      if (typeof el.className === 'string') {
-        return el.className.trim().split(/\s+/);
-      } else if (typeof el.className === 'object' && el.className.baseVal) {
-        return el.className.baseVal.trim().split(/\s+/);
-      }
-    } catch (e) {}
-    return [];
-  }
-
-  function ajustarElemento(el) {
-    // Em vez de reduzir para 1px fixo, ajusta o estilo para layout fluido e invisível visualmente
-    el.style.setProperty('width', '0', 'important');
-    el.style.setProperty('height', '0', 'important');
-    el.style.setProperty('padding', '0', 'important');
-    el.style.setProperty('margin', '0', 'important');
-    el.style.setProperty('border', 'none', 'important');
-    el.style.setProperty('opacity', '0', 'important'); // invisível sem quebrar layout
-    el.style.setProperty('visibility', 'hidden', 'important');
-    el.style.setProperty('display', 'inline-block', 'important');
-    el.style.setProperty('overflow', 'hidden', 'important');
-
-    // Caso seja SVG
-    if (el.tagName.toLowerCase() === 'svg') {
-      el.setAttribute('width', '0');
-      el.setAttribute('height', '0');
-    }
-  }
-
-  document.querySelectorAll('*').forEach(el => {
-    const rect = el.getBoundingClientRect();
-    const largura = Math.round(rect.width);
-    const altura = Math.round(rect.height);
-    const area = largura * altura;
-
-    if (area < 50) return;
-
-    const match = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
-    if (!match) return;
-
-    const id = el.id || '';
-    const classes = getClassList(el);
-    const chave = `${el.tagName}::${id || classes.join('.') || 'noid'}::${largura}x${altura}`;
-    if (vistos.has(chave)) return;
-    vistos.add(chave);
-
-    // Primeiro tenta por ID
-    if (id) {
-      const alvo = document.getElementById(id);
-      if (alvo) {
-        ajustarElemento(alvo);
-        elementosModificados.push(`#${id} (${largura}x${altura})`);
-        return;
-      }
-    }
-
-    // Depois tenta por classes
-    for (const cls of classes) {
-      const candidatos = document.getElementsByClassName(cls);
-      if (candidatos.length > 0) {
-        for (const alvo of candidatos) {
-          ajustarElemento(alvo);
-        }
-        elementosModificados.push(`.${cls} (${largura}x${altura})`);
-        return;
-      }
-    }
-
-    // Se nada deu certo, aplica direto
-    ajustarElemento(el);
-    elementosModificados.push(`${el.tagName} (${largura}x${altura})`);
-  });
-
-  alert(`🧠 ${elementosModificados.length} elementos ajustados!\n\nExemplos:\n` + elementosModificados.slice(0, 5).join('\n'));
-})();
-
-// =======================================================
