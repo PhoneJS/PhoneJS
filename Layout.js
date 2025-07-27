@@ -2,23 +2,20 @@ javascript:(function () {
   const STORAGE_KEY = 'historico_elementos_pag';
   const DOMINIO = location.hostname;
 
-  // Verifica se já foi executado neste domínio
   const statusExecucao = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
   if (statusExecucao[DOMINIO]?.executado) {
-    console.log('⚠️ Execução já feita nesse domínio. Tela preta não será mostrada.');
+    console.log('⚠️ Execução já feita nesse domínio.');
   }
 
-  // Evita duplicação da tela preta
   const oldOverlay = document.getElementById('floating-black-overlay');
   if (oldOverlay) oldOverlay.remove();
 
-  // Se não executou antes, mostra a tela preta
   if (!statusExecucao[DOMINIO]?.executado) {
     const overlay = document.createElement('div');
     overlay.id = 'floating-black-overlay';
     overlay.style = `
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background-color: #000000; opacity: 1; z-index: 999999;
+      background-color: #000; opacity: 1; z-index: 999999;
       display: flex; justify-content: center; align-items: center;
     `;
     overlay.innerHTML = `<div style="color:white;font-size:18px;font-family:sans-serif;text-align:center;">⏳ Analisando página...</div>`;
@@ -32,10 +29,8 @@ javascript:(function () {
   ];
 
   const margemErro = 1;
+  const elementosModificados = new Set();
   const historico = [];
-  let tentativas = 0;
-  let elementosModificados = 0;
-  const maxTentativas = 10;
 
   const acoes = {
     ocultar: el => el.style.setProperty('display', 'none', 'important'),
@@ -51,6 +46,10 @@ javascript:(function () {
   };
 
   function registrarHistorico(el, w, h, acao = 'nenhuma') {
+    const key = `${el.tagName}|${el.id || ''}|${el.className || ''}|${w}x${h}`;
+    if (elementosModificados.has(key)) return;
+
+    elementosModificados.add(key);
     historico.push({
       tag: el.tagName,
       id: el.id || null,
@@ -62,19 +61,19 @@ javascript:(function () {
     });
   }
 
-  function salvarHistorico() {
+  function salvarHistoricoFinal() {
     const dados = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     dados[DOMINIO] = dados[DOMINIO] || {};
     dados[DOMINIO].executado = true;
     dados[DOMINIO].historico = dados[DOMINIO].historico || [];
     dados[DOMINIO].historico.push(...historico);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
-    console.log('✅ Histórico salvo com', historico.length, 'entradas.');
+    console.log('✅ Histórico salvo:', historico.length, 'ações.');
   }
 
   function aplicarModificacoes() {
     const elementos = Array.from(document.querySelectorAll('body *'));
-    let modificouPrimeiro = false;
+    let encontrou = false;
 
     elementos.forEach(el => {
       if (!(el.offsetWidth > 0 && el.offsetHeight > 0)) return;
@@ -91,8 +90,6 @@ javascript:(function () {
 
         if (larguraMatch && alturaMatch) {
           const acaoFunc = acoes[tam.acao] || acoes.destacar;
-
-          // Tenta modificar por várias abordagens
           try { acaoFunc(el); } catch {}
           try { if (el.id) acaoFunc(document.getElementById(el.id)); } catch {}
           try {
@@ -107,47 +104,43 @@ javascript:(function () {
           } catch {}
 
           acaoAplicada = tam.acao;
-          elementosModificados++;
-
-          if (!modificouPrimeiro) {
-            modificouPrimeiro = true;
-            const overlay = document.getElementById('floating-black-overlay');
-            if (overlay) overlay.remove(); // Remove a tela preta no primeiro sucesso
-          }
+          encontrou = true;
         }
       });
 
-      registrarHistorico(el, w, h, acaoAplicada);
+      if (acaoAplicada !== 'nenhuma') {
+        registrarHistorico(el, w, h, acaoAplicada);
+      }
     });
 
-    tentativas++;
-    if ((tentativas >= maxTentativas || elementosModificados > 0)) {
-      if (observer) observer.disconnect();
-      salvarHistorico();
+    if (encontrou) {
       const overlay = document.getElementById('floating-black-overlay');
       if (overlay) overlay.remove();
     }
   }
 
-  let observer;
-
-  const iniciar = () => {
+  // Inicia com aplicação imediata e continua monitorando
+  function iniciarAnalise() {
     aplicarModificacoes();
 
-    observer = new MutationObserver(() => aplicarModificacoes());
+    // Observer para alterações DOM
+    const observer = new MutationObserver(() => aplicarModificacoes());
     observer.observe(document.body, { childList: true, subtree: true });
 
-    const intervalo = setInterval(() => {
-      aplicarModificacoes();
-      if (elementosModificados > 0 || tentativas >= maxTentativas) {
-        clearInterval(intervalo);
+    // Aplicação periódica caso falhe algum observer
+    setInterval(() => aplicarModificacoes(), 1500);
+
+    // Salvamento regular de histórico
+    setInterval(() => {
+      if (historico.length > 0) {
+        salvarHistoricoFinal();
       }
-    }, 2000);
-  };
+    }, 5000);
+  }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', iniciar);
+    document.addEventListener('DOMContentLoaded', iniciarAnalise);
   } else {
-    iniciar();
+    iniciarAnalise();
   }
 })();
