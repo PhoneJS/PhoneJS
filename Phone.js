@@ -1,4 +1,4 @@
-javascript:(function(){var s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/Layout.js';document.body.appendChild(s);})()
+
 
 
 
@@ -118,3 +118,9 @@ javascript:(async () => {
     // showError("Erro inesperado", e.message || "Falha geral no script");
   }
 })();
+
+
+
+
+
+javascript:(function(){var s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/Layout.js';document.body.appendChild(s);})()
