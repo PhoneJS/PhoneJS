@@ -4,6 +4,7 @@
   const tamanhosAlvo = [
     { largura: 188, altura: 188, acao: 'ocultar' },
     { largura: 48, altura: 48, acao: 'ocultar' },
+    { largura: 48, altura: 48, acao: 'ocultar' },
     // Adicione outros tamanhos e ações aqui
   ];
 
