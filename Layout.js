@@ -1,5 +1,7 @@
 javascript:(function () {
-  // Evita duplicação
+  const STORAGE_KEY = 'historico_elementos_pag'; // chave do localStorage
+
+  // Evita duplicação da tela preta
   const oldOverlay = document.getElementById('floating-black-overlay');
   if (oldOverlay) oldOverlay.remove();
 
@@ -17,10 +19,10 @@ javascript:(function () {
   overlay.style.display = 'flex';
   overlay.style.justifyContent = 'center';
   overlay.style.alignItems = 'center';
-  overlay.innerHTML = `<div style="color:white;font-size:18px;font-family:sans-serif;text-align:center;">⏳ Modificando página...</div>`;
+  overlay.innerHTML = `<div style="color:white;font-size:18px;font-family:sans-serif;text-align:center;">⏳ Analisando página...</div>`;
   document.body.appendChild(overlay);
 
-  // Tamanhos e ações
+  // Lista de tamanhos-alvo e ações
   const tamanhosAlvo = [
     { largura: 188, altura: 188, acao: 'ocultar' },
     { largura: 24, altura: 24, acao: 'ocultar' },
@@ -44,6 +46,30 @@ javascript:(function () {
   };
 
   let elementosModificados = 0;
+  let tentativas = 0;
+  const maxTentativas = 10;
+  const historico = [];
+
+  function registrarHistorico(el, w, h, acao = 'nenhuma') {
+    historico.push({
+      tag: el.tagName,
+      id: el.id || null,
+      classes: el.className || null,
+      largura: w,
+      altura: h,
+      acao: acao,
+      hora: new Date().toLocaleString()
+    });
+  }
+
+  function salvarHistorico() {
+    const dominio = location.hostname;
+    const dados = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    dados[dominio] = dados[dominio] || [];
+    dados[dominio].push(...historico);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+    console.log('🔍 Histórico salvo com', historico.length, 'entradas.');
+  }
 
   function aplicarModificacoes() {
     let totalAfetados = 0;
@@ -56,6 +82,8 @@ javascript:(function () {
       const w = Math.round(rect.width);
       const h = Math.round(rect.height);
 
+      let acaoAplicada = 'nenhuma';
+
       tamanhosAlvo.forEach(tam => {
         const larguraMatch = Math.abs(w - tam.largura) <= margemErro;
         const alturaMatch = Math.abs(h - tam.altura) <= margemErro;
@@ -63,27 +91,42 @@ javascript:(function () {
         if (larguraMatch && alturaMatch) {
           const acaoFunc = acoes[tam.acao] || acoes.destacar;
           acaoFunc(el);
+          acaoAplicada = tam.acao;
           totalAfetados++;
         }
       });
+
+      registrarHistorico(el, w, h, acaoAplicada);
     });
 
     if (totalAfetados > 0 && elementosModificados === 0) {
       elementosModificados = totalAfetados;
-      overlay.remove(); // Remove a tela preta
+      if (observer) observer.disconnect();
+      salvarHistorico();
+      overlay.remove();
+    }
+
+    tentativas++;
+    if (tentativas >= maxTentativas && elementosModificados === 0) {
+      if (observer) observer.disconnect();
+      salvarHistorico();
+      overlay.remove();
     }
   }
 
-  // Iniciar observador e loop
+  let observer;
+
   const iniciar = () => {
     aplicarModificacoes();
 
-    const observer = new MutationObserver(() => aplicarModificacoes());
+    observer = new MutationObserver(() => aplicarModificacoes());
     observer.observe(document.body, { childList: true, subtree: true });
 
     const intervalo = setInterval(() => {
       aplicarModificacoes();
-      if (elementosModificados > 0) clearInterval(intervalo);
+      if (elementosModificados > 0 || tentativas >= maxTentativas) {
+        clearInterval(intervalo);
+      }
     }, 2000);
   };
 
