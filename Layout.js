@@ -7,19 +7,20 @@
     return;
   }
 
-  // Cria tela preta de carregamento
+  // Cria a tela preta de carregamento
   const overlay = document.createElement('div');
   overlay.id = 'tela-preta-carregando';
   overlay.style.cssText = `
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: black; color: white;
     display: flex; align-items: center; justify-content: center;
     font-size: 20px; z-index: 999999;
-    transition: opacity 0.5s ease;
+    flex-direction: column; transition: opacity 0.5s ease;
   `;
-  overlay.innerText = '🔧 Carregando modificação...';
+  overlay.innerHTML = `<div>🔧 Carregando modificação...</div><div style="font-size:14px;margin-top:10px;" id="status-text">Aguardando elementos...</div>`;
   document.body.appendChild(overlay);
+
+  const statusText = () => document.getElementById('status-text');
 
   const tamanhosAlvo = [
     { largura: 188, altura: 188, acao: 'ocultar' },
@@ -44,7 +45,7 @@
     }
   };
 
-  function aplicarAcoesAutomatica() {
+  function tentarModificar() {
     let totalAfetados = 0;
     const elementos = Array.from(document.querySelectorAll('body *'));
 
@@ -67,19 +68,27 @@
       });
     });
 
-    console.log(`✅ ${totalAfetados} elemento(s) modificados.`);
-    localStorage.setItem(chaveStorage, 'true');
+    if (totalAfetados > 0) {
+      console.log(`✅ ${totalAfetados} elemento(s) modificados.`);
+      localStorage.setItem(chaveStorage, 'true');
 
-    // Remove a tela preta
-    overlay.style.opacity = '0';
-    setTimeout(() => overlay.remove(), 500);
+      // Remove a tela preta com suavidade
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.remove(), 500);
+    } else {
+      console.log('⏳ Nenhum elemento correspondente encontrado ainda...');
+      if (statusText()) statusText().innerText = 'Nenhum elemento encontrado... tentando novamente';
+
+      // Tenta de novo em 1 segundo
+      setTimeout(tentarModificar, 1000);
+    }
   }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(aplicarAcoesAutomatica, 1000);
+      setTimeout(tentarModificar, 1000);
     });
   } else {
-    setTimeout(aplicarAcoesAutomatica, 1000);
+    setTimeout(tentarModificar, 1000);
   }
 })();
