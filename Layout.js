@@ -1,4 +1,4 @@
-javascript:(function () {
+(function () {
   const HISTORICO_ALVO = "188x188,133x24,97x24,491x48";
 
   const tamanhosAlvo = HISTORICO_ALVO.split(',').map(t => {
