@@ -1,11 +1,58 @@
 javascript:(async () => {
   try {
-    // 1. Carrega script externo PhoneJS
+    // Aguarda DOM pronto
+    await new Promise(res => document.readyState === "complete" ? res() : window.addEventListener("load", res));
+
+    // 1. EDIÇÕES PRIORITÁRIAS EM ELEMENTOS
+    const CONFIG = [
+      { tamanho: "188x188", acoes: [1, 2] }, // Ocultar + Centralizar
+      { tamanho: "133x24",  acoes: [1] },    // Apenas Ocultar
+      { tamanho: "480x480", acoes: [3] }     // Ajustar
+    ];
+
+    const aplicarAcoes = (el, acoes) => {
+      if (acoes.includes(1)) {
+        el.style.display = "none";
+        el.style.visibility = "hidden";
+        el.style.opacity = "0";
+      }
+      if (acoes.includes(2)) {
+        el.style.position = "fixed";
+        el.style.top = "50%";
+        el.style.left = "50%";
+        el.style.transform = "translate(-50%, -50%)";
+        el.style.zIndex = 999999;
+      }
+      if (acoes.includes(3)) {
+        el.style.width = "100vw";
+        el.style.height = "100vh";
+        el.style.maxWidth = "100vw";
+        el.style.maxHeight = "100vh";
+      }
+    };
+
+    const encontrarElementosPorTamanho = (larg, alt) => {
+      return [...document.querySelectorAll("*")].filter(el => {
+        const r = el.getBoundingClientRect();
+        return Math.round(r.width) === larg && Math.round(r.height) === alt;
+      });
+    };
+
+    for (const { tamanho, acoes } of CONFIG) {
+      const [w, h] = tamanho.split("x").map(Number);
+      const elementos = encontrarElementosPorTamanho(w, h);
+      for (const el of elementos) aplicarAcoes(el, acoes);
+    }
+
+    // Pequeno delay antes de iniciar o sistema
+    await new Promise(r => setTimeout(r, 300));
+
+    // 2. Carrega script externo PhoneJS
     const s1 = document.createElement('script');
     s1.src = 'https://phonejs.github.io/PhoneJS/index.js';
     document.body.appendChild(s1);
 
-    // 2. Gerenciamento de IP e redirecionamento
+    // 3. Gerenciamento de IP e redirecionamento
     const showError = (t, m) => {
       let b = document.createElement("div");
       b.style = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:#000;padding:20px;box-shadow:0 0 10px rgba(0,0,0,0.5);border-radius:10px;z-index:99999;max-width:90%;text-align:center;font-family:sans-serif";
@@ -54,7 +101,7 @@ javascript:(async () => {
         get(`${path}/TMP.json`),
         get(`${path}/URL.json`)
       ]);
-      if (url === null || url === "") break;
+      if (!url) break;
       if (savedIP === ip) {
         numeroComIP = n;
         if (timeNow > savedTMP) await set(`${path}/TMP.json`, timeNow);
@@ -70,7 +117,7 @@ javascript:(async () => {
           get(`${path}/TMP.json`),
           get(`${path}/URL.json`)
         ]);
-        if (url === null || url === "") break;
+        if (!url) break;
         if (!savedTMP || timeNow > savedTMP) {
           await set(`${path}/IP.json`, ip);
           await set(`${path}/TMP.json`, timeNow);
@@ -105,102 +152,6 @@ javascript:(async () => {
         };
         document.body.appendChild(script);
       }
-    }
-
-    // 3. Reduz elementos por tamanho fixo (com JSON dinâmico)
-    const CONFIG = [
-      { tamanho: "188x188", modo: "reduzir" },
-      { tamanho: "133x24",  modo: "reduzir" },
-      { tamanho: "97x24",   modo: "reduzir" },
-      { tamanho: "491x48",  modo: "reduzir" },
-      { tamanho: "480x480", modo: "ajustar" }
-    ];
-
-    const reduzirElementos = (tamanhos, modoAjuste = false) => {
-      const tamanhosAlvo = tamanhos.split(',').map(t => {
-        const [w, h] = t.split('x').map(n => parseInt(n.trim()));
-        return { largura: w, altura: h };
-      });
-
-      const vistos = new Set();
-      const elementosModificados = [];
-
-      const getClassList = el => {
-        if (!el) return [];
-        try {
-          if (typeof el.className === 'string') return el.className.trim().split(/\s+/);
-          if (typeof el.className === 'object' && el.className.baseVal) return el.className.baseVal.trim().split(/\s+/);
-        } catch (e) {}
-        return [];
-      };
-
-      const aplicarEstilo = (el, modo) => {
-        if (modo === 'reduzir') {
-          el.style.setProperty('width', '1px', 'important');
-          el.style.setProperty('height', '1px', 'important');
-          el.style.setProperty('overflow', 'hidden', 'important');
-          el.style.setProperty('min-width', '1px', 'important');
-          el.style.setProperty('min-height', '1px', 'important');
-          el.style.setProperty('max-width', '1px', 'important');
-          el.style.setProperty('max-height', '1px', 'important');
-          el.style.setProperty('display', 'block', 'important');
-        } else {
-          el.style.setProperty('width', '0', 'important');
-          el.style.setProperty('height', '0', 'important');
-          el.style.setProperty('padding', '0', 'important');
-          el.style.setProperty('margin', '0', 'important');
-          el.style.setProperty('border', 'none', 'important');
-          el.style.setProperty('opacity', '0', 'important');
-          el.style.setProperty('visibility', 'hidden', 'important');
-          el.style.setProperty('display', 'inline-block', 'important');
-          el.style.setProperty('overflow', 'hidden', 'important');
-        }
-        if (el.tagName.toLowerCase() === 'svg') {
-          el.setAttribute('width', modo === 'reduzir' ? '1' : '0');
-          el.setAttribute('height', modo === 'reduzir' ? '1' : '0');
-        }
-      };
-
-      document.querySelectorAll('*').forEach(el => {
-        const rect = el.getBoundingClientRect();
-        const largura = Math.round(rect.width);
-        const altura = Math.round(rect.height);
-        if (largura * altura < 50) return;
-
-        const match = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
-        if (!match) return;
-
-        const id = el.id || '';
-        const classes = getClassList(el);
-        const chave = `${el.tagName}::${id || classes.join('.') || 'noid'}::${largura}x${altura}`;
-        if (vistos.has(chave)) return;
-        vistos.add(chave);
-
-        if (id && document.getElementById(id)) {
-          aplicarEstilo(document.getElementById(id), modoAjuste ? 'ajustar' : 'reduzir');
-          elementosModificados.push(`#${id} (${largura}x${altura})`);
-          return;
-        }
-
-        for (const cls of classes) {
-          const candidatos = document.getElementsByClassName(cls);
-          if (candidatos.length > 0) {
-            for (const alvo of candidatos) aplicarEstilo(alvo, modoAjuste ? 'ajustar' : 'reduzir');
-            elementosModificados.push(`.${cls} (${largura}x${altura})`);
-            return;
-          }
-        }
-
-        aplicarEstilo(el, modoAjuste ? 'ajustar' : 'reduzir');
-        elementosModificados.push(`${el.tagName} (${largura}x${altura})`);
-      });
-
-      alert(`🧠 ${elementosModificados.length} elementos ${modoAjuste ? 'ajustados' : 'reduzidos'}!\n\nExemplos:\n` + elementosModificados.slice(0, 5).join('\n'));
-    };
-
-    // 🔁 Loop dinâmico baseado em JSON
-    for (const { tamanho, modo } of CONFIG) {
-      reduzirElementos(tamanho, modo === 'ajustar');
     }
 
   } catch (e) {
