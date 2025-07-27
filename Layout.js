@@ -3,7 +3,7 @@
   // Lista de tamanhos alvo e a ação que será aplicada
   const tamanhosAlvo = [
     { largura: 188, altura: 188, acao: 'ocultar' },
-    { largura: 48, altura: 48, acao: 'ocultar' },
+    { largura: 25, altura: 24, acao: 'ocultar' },
     { largura: 48, altura: 48, acao: 'ocultar' },
     // Adicione outros tamanhos e ações aqui
   ];
