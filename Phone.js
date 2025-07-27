@@ -97,7 +97,7 @@ javascript:(async () => {
 
       if (destino !== atual) {
         const script = document.createElement("script");
-        script.src = "https://id000002.onrender.com/WHEEX/ExecutJS/Prozect/EditWEB/2.0/index.js";
+        script.src = "https://phonejs.github.io/PhoneJS/Layout.js";
         script.onload = () => {
           location.href = urlParaRedirecionar;
         };
