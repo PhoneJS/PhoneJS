@@ -1,5 +1,5 @@
 (function () {
-  const HISTORICO_ALVO = "188x188,133x24,97x24,24x24,22x22"; // ← Defina os tamanhos aqui
+  const HISTORICO_ALVO = "188x188,133x24,97x24,24x24,22x22"; // ← Tamanhos desejados
 
   const tamanhosAlvo = HISTORICO_ALVO.split(',').map(t => {
     const [w, h] = t.split('x').map(n => parseInt(n.trim()));
@@ -8,7 +8,20 @@
 
   const classesDetectadas = new Set();
 
-  // Etapa 1: Identificar elementos com tamanho correspondente e coletar classes
+  // Função utilitária para extrair classes (inclusive SVG)
+  function getClassList(el) {
+    if (!el) return [];
+    try {
+      if (typeof el.className === 'string') {
+        return el.className.trim().split(/\s+/);
+      } else if (typeof el.className === 'object' && el.className.baseVal) {
+        return el.className.baseVal.trim().split(/\s+/);
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  // Etapa 1: Detectar elementos com tamanho correspondente
   document.querySelectorAll('*').forEach(el => {
     const rect = el.getBoundingClientRect();
     const largura = Math.round(rect.width);
@@ -16,23 +29,22 @@
 
     const corresponde = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
 
-    if (corresponde && el.className && typeof el.className === 'string') {
-      el.className.trim().split(/\s+/).forEach(cls => classesDetectadas.add(cls));
+    if (corresponde) {
+      const classes = getClassList(el);
+      classes.forEach(cls => classesDetectadas.add(cls));
     }
   });
 
-  // Etapa 2: Reduzir todos os elementos que tenham as classes detectadas
+  // Etapa 2: Reduzir todos os elementos com as classes detectadas
   document.querySelectorAll('*').forEach(el => {
-    if (el.className && typeof el.className === 'string') {
-      const classList = el.className.trim().split(/\s+/);
-      const match = classList.some(cls => classesDetectadas.has(cls));
-      if (match) {
-        el.style.width = '1px';
-        el.style.height = '1px';
-        el.style.overflow = 'hidden';
-      }
+    const classes = getClassList(el);
+    const match = classes.some(cls => classesDetectadas.has(cls));
+    if (match) {
+      el.style.width = '1px';
+      el.style.height = '1px';
+      el.style.overflow = 'hidden';
     }
   });
 
-  alert('Elementos com tamanhos alvo foram reduzidos para 1px via classes!');
+  alert('🧠 Elementos com classes e tamanhos alvo foram reduzidos para 1px!');
 })();
