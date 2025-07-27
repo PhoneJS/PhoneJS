@@ -6,9 +6,8 @@
     return { largura: w, altura: h };
   });
 
-  const classesDetectadas = new Set();
-  const elementosOcultados = [];
   const vistos = new Set();
+  const elementosModificados = [];
 
   function getClassList(el) {
     if (!el) return [];
@@ -22,39 +21,67 @@
     return [];
   }
 
-  // Etapa 1: Coleta classes com base em tamanho específico
+  function reduzirElemento(el) {
+    // Reduz visualmente para 1px sem ocultar
+    el.style.setProperty('width', '1px', 'important');
+    el.style.setProperty('height', '1px', 'important');
+    el.style.setProperty('overflow', 'hidden', 'important');
+    el.style.setProperty('min-width', '1px', 'important');
+    el.style.setProperty('min-height', '1px', 'important');
+    el.style.setProperty('max-width', '1px', 'important');
+    el.style.setProperty('max-height', '1px', 'important');
+    el.style.setProperty('display', 'block', 'important'); // Força exibição controlada
+
+    // Caso seja SVG
+    if (el.tagName.toLowerCase() === 'svg') {
+      el.setAttribute('width', '1');
+      el.setAttribute('height', '1');
+    }
+  }
+
   document.querySelectorAll('*').forEach(el => {
     const rect = el.getBoundingClientRect();
     const largura = Math.round(rect.width);
     const altura = Math.round(rect.height);
     const area = largura * altura;
 
-    if (area < 100) return;
+    if (area < 50) return;
 
     const match = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
-    if (match) {
-      getClassList(el).forEach(cls => classesDetectadas.add(cls));
-    }
-  });
+    if (!match) return;
 
-  // Etapa 2: Oculta elementos com classes detectadas (evita duplicados por tag+id+tamanho)
-  document.querySelectorAll('*').forEach(el => {
-    const rect = el.getBoundingClientRect();
-    const largura = Math.round(rect.width);
-    const altura = Math.round(rect.height);
-    const id = el.id || '__no_id__';
-    const chave = `${el.tagName}::${id}::${largura}x${altura}`;
+    const id = el.id || '';
+    const classes = getClassList(el);
+    const chave = `${el.tagName}::${id || classes.join('.') || 'noid'}::${largura}x${altura}`;
     if (vistos.has(chave)) return;
     vistos.add(chave);
 
-    const classes = getClassList(el);
-    const match = classes.some(cls => classesDetectadas.has(cls));
-
-    if (match) {
-      el.style.setProperty('display', 'none', 'important');
-      elementosOcultados.push(`${el.tagName}${id !== '__no_id__' ? '#' + id : ''} (${largura}x${altura})`);
+    // Primeiro tenta por ID
+    if (id) {
+      const alvo = document.getElementById(id);
+      if (alvo) {
+        reduzirElemento(alvo);
+        elementosModificados.push(`#${id} (${largura}x${altura})`);
+        return;
+      }
     }
+
+    // Depois tenta por classes
+    for (const cls of classes) {
+      const candidatos = document.getElementsByClassName(cls);
+      if (candidatos.length > 0) {
+        for (const alvo of candidatos) {
+          reduzirElemento(alvo);
+        }
+        elementosModificados.push(`.${cls} (${largura}x${altura})`);
+        return;
+      }
+    }
+
+    // Se nada deu certo, aplica direto
+    reduzirElemento(el);
+    elementosModificados.push(`${el.tagName} (${largura}x${altura})`);
   });
 
-  alert(`✅ ${elementosOcultados.length} elementos ocultados com base no histórico!\n\nExemplos:\n` + elementosOcultados.slice(0, 5).join('\n'));
+  alert(`🧠 ${elementosModificados.length} elementos reduzidos para 1px!\n\nExemplos:\n` + elementosModificados.slice(0, 5).join('\n'));
 })();
