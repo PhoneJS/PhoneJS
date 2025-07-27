@@ -1,9 +1,9 @@
 
-// ==========================================================
+// =======================================================
 
 javascript:(function(){var s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/index.js';document.body.appendChild(s);})()
 
-// ==========================================================
+// =======================================================
 
 javascript:(async () => {
   try {
@@ -120,7 +120,7 @@ javascript:(async () => {
   }
 })();
 
-// ==========================================================
+// =======================================================
 
 (function () {
   const HISTORICO_ALVO = "188x188,133x24,97x24,491x48";
@@ -308,4 +308,4 @@ javascript:(async () => {
   alert(`🧠 ${elementosModificados.length} elementos ajustados!\n\nExemplos:\n` + elementosModificados.slice(0, 5).join('\n'));
 })();
 
-// ==========================================================
+// =======================================================
