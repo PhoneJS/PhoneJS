@@ -59,3 +59,28 @@
 
   alert('✅ Elementos com classes detectadas foram forçados a 1px!');
 })();
+
+
+
+
+
+(function () {
+  const CLASSE_ALVO = "[object SVGAnimatedString]"; // ⬅️ coloque aqui o nome real da classe
+
+  document.querySelectorAll(`svg.${CLASSE_ALVO}`).forEach(svg => {
+    svg.style.setProperty('width', '1px', 'important');
+    svg.style.setProperty('height', '1px', 'important');
+    svg.style.setProperty('overflow', 'hidden', 'important');
+    svg.style.setProperty('display', 'block', 'important');
+    svg.style.setProperty('min-width', '1px', 'important');
+    svg.style.setProperty('min-height', '1px', 'important');
+    svg.style.setProperty('max-width', '1px', 'important');
+    svg.style.setProperty('max-height', '1px', 'important');
+
+    // Edição de atributos SVG
+    svg.setAttribute('width', '1');
+    svg.setAttribute('height', '1');
+  });
+
+  alert(`✅ SVG com classe "${CLASSE_ALVO}" foi reduzido para 1px!`);
+})();
