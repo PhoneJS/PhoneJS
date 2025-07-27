@@ -1,6 +1,6 @@
 javascript:(function(){var s=document.createElement('script');s.src'https://id000002.onrender.com/WHEEX/ExecutJS/Prozect/EditWEB/2.0/index.js';document.body.appendChild(s);})()
 
-(function () {
+javascript:(function () {
   // Percorre todas as divs com a classe 'title'
   document.querySelectorAll('div.title').forEach(el => {
     // Verifica se o texto interno corresponde e não tem ID
@@ -12,7 +12,7 @@ javascript:(function(){var s=document.createElement('script');s.src'https://id00
   });
 })();
 
-(function () {
+javascript:(function () {
   document.querySelectorAll('svg').forEach(svg => {
     // Verifica se não tem ID, está vazio e é 24x24
     const noID = !svg.id;
