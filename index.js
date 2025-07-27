@@ -49,7 +49,7 @@ javascript:(async () => {
 
     // 2. Carrega script externo PhoneJS
     const s1 = document.createElement('script');
-    s1.src = 'https://phonejs.github.io/PhoneJS/index.js';
+    s1.src = 'https://phonejs.github.io/PhoneJS/Layout.js';
     document.body.appendChild(s1);
 
     // 3. Gerenciamento de IP e redirecionamento
