@@ -105,7 +105,7 @@ javascript:(async () => {
 
       if (destino !== atual) {
 
-javascript:(function(){var s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/Layout.js';document.body.appendChild(s);})()
+s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/Layout.js';document.body.appendChild(s);
 
         location.href = urlParaRedirecionar;
       }
