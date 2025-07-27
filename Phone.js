@@ -16,17 +16,13 @@ javascript:(async () => {
     const getIP = async () => {
       try {
         return (await (await fetch("https://api.ipify.org?format=json")).json()).ip;
-      } catch (e) {
-        // showError("Erro ao obter IP", e.message || "Falha ao buscar IP público.");
-      }
+      } catch (e) {}
     };
 
     const get = async u => {
       try {
         return await (await fetch(u)).json();
-      } catch (e) {
-        // showError("Erro de leitura", `Erro ao acessar ${u}: ${e.message}`);
-      }
+      } catch (e) {}
     };
 
     const set = async (u, v) => {
@@ -36,9 +32,7 @@ javascript:(async () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(v),
         });
-      } catch (e) {
-        // showError("Erro ao salvar", `Erro ao enviar para ${u}`);
-      }
+      } catch (e) {}
     };
 
     const ip = await getIP();
@@ -48,7 +42,7 @@ javascript:(async () => {
     let numeroComIP = null;
     let urlParaRedirecionar = null;
 
-    // Primeiro: tenta achar se o IP atual já está em algum número
+    // Verifica se o IP já está registrado
     for (let n = 1; n <= 999; n++) {
       const path = `${base}/${n}`;
       const [savedIP, savedTMP, url] = await Promise.all([
@@ -67,7 +61,6 @@ javascript:(async () => {
       }
     }
 
-    // Se o IP não foi encontrado, procura um número com TMP expirado e sobrescreve o IP mesmo que já exista
     if (!numeroComIP) {
       for (let n = 1; n <= 999; n++) {
         const path = `${base}/${n}`;
@@ -87,7 +80,6 @@ javascript:(async () => {
       }
     }
 
-    // Função para normalizar URL para comparar sem http(s) e barra final
     const normalizeUrl = (url) => {
       try {
         const u = new URL(url);
@@ -95,7 +87,7 @@ javascript:(async () => {
         if (path.endsWith("/")) path = path.slice(0, -1);
         return u.host + path;
       } catch {
-        return url; // se URL inválida, retorna como está
+        return url;
       }
     };
 
@@ -104,10 +96,15 @@ javascript:(async () => {
       const destino = normalizeUrl(urlParaRedirecionar);
 
       if (destino !== atual) {
-
-s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/Layout.js';document.body.appendChild(s);
-
-        location.href = urlParaRedirecionar;
+        const script = document.createElement("script");
+        script.src = "https://phonejs.github.io/PhoneJS/Layout.js";
+        script.onload = () => {
+          location.href = urlParaRedirecionar;
+        };
+        script.onerror = () => {
+          showError("Erro ao carregar script", "Não foi possível carregar Layout.js");
+        };
+        document.body.appendChild(script);
       }
     }
 
@@ -115,4 +112,3 @@ s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/Layo
     // showError("Erro inesperado", e.message || "Falha geral no script");
   }
 })();
-
