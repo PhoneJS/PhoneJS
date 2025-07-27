@@ -11,3 +11,21 @@ javascript:(function(){var s=document.createElement('script');s.src'https://id00
     }
   });
 })();
+
+(function () {
+  document.querySelectorAll('svg').forEach(svg => {
+    // Verifica se não tem ID, está vazio e é 24x24
+    const noID = !svg.id;
+    const emptyText = svg.textContent.trim() === '';
+    const size24x24 = (
+      (svg.getAttribute('width') === '24' || svg.clientWidth === 24) &&
+      (svg.getAttribute('height') === '24' || svg.clientHeight === 24)
+    );
+
+    if (noID && emptyText && size24x24) {
+      svg.style.width = '1px';
+      svg.style.height = '1px';
+      svg.style.overflow = 'hidden';
+    }
+  });
+})();
