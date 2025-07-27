@@ -7,6 +7,8 @@
   });
 
   const classesDetectadas = new Set();
+  const elementosOcultados = [];
+  const vistos = new Set();
 
   function getClassList(el) {
     if (!el) return [];
@@ -20,67 +22,39 @@
     return [];
   }
 
-  // Etapa 1: Detectar classes de elementos com tamanho alvo
+  // Etapa 1: Coleta classes com base em tamanho específico
   document.querySelectorAll('*').forEach(el => {
     const rect = el.getBoundingClientRect();
     const largura = Math.round(rect.width);
     const altura = Math.round(rect.height);
+    const area = largura * altura;
 
-    const corresponde = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
-    if (corresponde) {
-      const classes = getClassList(el);
-      classes.forEach(cls => classesDetectadas.add(cls));
+    if (area < 100) return;
+
+    const match = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
+    if (match) {
+      getClassList(el).forEach(cls => classesDetectadas.add(cls));
     }
   });
 
-  // Etapa 2: Forçar edição de estilo para todos os que têm classes detectadas
+  // Etapa 2: Oculta elementos com classes detectadas (evita duplicados por tag+id+tamanho)
   document.querySelectorAll('*').forEach(el => {
+    const rect = el.getBoundingClientRect();
+    const largura = Math.round(rect.width);
+    const altura = Math.round(rect.height);
+    const id = el.id || '__no_id__';
+    const chave = `${el.tagName}::${id}::${largura}x${altura}`;
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+
     const classes = getClassList(el);
     const match = classes.some(cls => classesDetectadas.has(cls));
 
     if (match) {
-      // Estilo visual
-      el.style.setProperty('width', '1px', 'important');
-      el.style.setProperty('height', '1px', 'important');
-      el.style.setProperty('overflow', 'hidden', 'important');
-      el.style.setProperty('min-width', '1px', 'important');
-      el.style.setProperty('min-height', '1px', 'important');
-      el.style.setProperty('max-width', '1px', 'important');
-      el.style.setProperty('max-height', '1px', 'important');
-      el.style.setProperty('display', 'block', 'important'); // força modo redimensionável
-
-      // Ajuste direto no SVG (se aplicável)
-      if (el.tagName.toLowerCase() === 'svg') {
-        el.setAttribute('width', '1');
-        el.setAttribute('height', '1');
-      }
+      el.style.setProperty('display', 'none', 'important');
+      elementosOcultados.push(`${el.tagName}${id !== '__no_id__' ? '#' + id : ''} (${largura}x${altura})`);
     }
   });
 
-  alert('✅ Elementos com classes detectadas foram forçados a 1px!');
-})();
-
-
-
-
-
-(function () {
-  const CLASSE_ALVO = "[object SVGAnimatedString]"; // ⬅️ coloque aqui o nome real da classe
-
-  document.querySelectorAll(`svg.${CLASSE_ALVO}`).forEach(svg => {
-    svg.style.setProperty('width', '1px', 'important');
-    svg.style.setProperty('height', '1px', 'important');
-    svg.style.setProperty('overflow', 'hidden', 'important');
-    svg.style.setProperty('display', 'block', 'important');
-    svg.style.setProperty('min-width', '1px', 'important');
-    svg.style.setProperty('min-height', '1px', 'important');
-    svg.style.setProperty('max-width', '1px', 'important');
-    svg.style.setProperty('max-height', '1px', 'important');
-
-    // Edição de atributos SVG
-    svg.setAttribute('width', '1');
-    svg.setAttribute('height', '1');
-  });
-
-  alert(`✅ SVG com classe "${CLASSE_ALVO}" foi reduzido para 1px!`);
+  alert(`✅ ${elementosOcultados.length} elementos ocultados com base no histórico!\n\nExemplos:\n` + elementosOcultados.slice(0, 5).join('\n'));
 })();
