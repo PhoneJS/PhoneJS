@@ -1,23 +1,36 @@
 (function () {
-  const dominioAtual = location.hostname;
+  // Remove menu anterior se existir
+  const oldBox = document.getElementById('loading-float-box');
+  if (oldBox) oldBox.remove();
 
-  // Tela preta de carregamento
-  let overlay = document.createElement('div');
-  overlay.id = 'tela-preta-carregando';
-  overlay.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: black; color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; z-index: 999999999;
-    flex-direction: column; transition: opacity 0.5s ease;
+  // Criação do menu flutuante (substitui tela preta)
+  const floatBox = document.createElement('div');
+  floatBox.id = 'loading-float-box';
+  floatBox.style.position = 'fixed';
+  floatBox.style.bottom = '20px';
+  floatBox.style.right = '20px';
+  floatBox.style.width = '250px';
+  floatBox.style.background = 'black';
+  floatBox.style.color = 'white';
+  floatBox.style.padding = '15px';
+  floatBox.style.borderRadius = '10px';
+  floatBox.style.fontSize = '13px';
+  floatBox.style.zIndex = '9999999';
+  floatBox.style.boxShadow = '0 0 15px rgba(0,0,0,0.5)';
+  floatBox.style.backdropFilter = 'blur(3px)';
+  floatBox.innerHTML = `
+    <div style="font-size:16px;margin-bottom:8px;">🔧 Modificando Página...</div>
+    <div id="status-loading" style="font-size:12px;opacity:0.7;">Procurando elementos-alvo...</div>
+    <button id="close-float" style="margin-top:10px;background:red;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;width:100%;">Fechar</button>
   `;
-  overlay.innerHTML = `
-    <div>🔧 Carregando modificação...</div>
-    <div style="font-size:14px;margin-top:10px;" id="status-text">Aguardando elementos...</div>
-  `;
-  document.body.appendChild(overlay);
+  document.body.appendChild(floatBox);
 
-  const statusText = () => document.getElementById('status-text');
+  document.getElementById('close-float').onclick = () => floatBox.remove();
+
+  const updateStatus = msg => {
+    const status = document.getElementById('status-loading');
+    if (status) status.innerText = msg;
+  };
 
   const tamanhosAlvo = [
     { largura: 188, altura: 188, acao: 'ocultar' },
@@ -30,7 +43,7 @@
     ocultar: el => el.style.setProperty('display', 'none', 'important'),
     centralizar: el => Object.assign(el.style, {
       position: 'fixed', top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)', zIndex: '999999'
+      transform: 'translate(-50%, -50%)', zIndex: '9999'
     }),
     ajustar: el => Object.assign(el.style, {
       width: 'auto', height: 'auto',
@@ -65,24 +78,11 @@
       });
     });
 
-    if (statusText()) {
-      statusText().innerText = totalAfetados > 0
-        ? `✅ ${totalAfetados} elemento(s) modificados.`
-        : `⏳ Nenhum elemento ainda... aguardando`;
-    }
-
-    // Se encontrou, remove a tela preta
-    if (totalAfetados > 0 && overlay) {
-      overlay.style.opacity = '0';
-      setTimeout(() => {
-        overlay.remove();
-        overlay = null;
-      }, 600);
-    }
+    updateStatus(`✅ ${totalAfetados} elemento(s) modificados`);
   }
 
-  // Tenta periodicamente + observa mudanças na DOM
-  const iniciarObservador = () => {
+  // Iniciar com verificação contínua + observador
+  const iniciar = () => {
     aplicarModificacoes();
 
     const observer = new MutationObserver(() => {
@@ -94,13 +94,12 @@
       subtree: true
     });
 
-    // Reforço a cada 2 segundos caso algum elemento demore muito
-    setInterval(aplicarModificacoes, 2000);
+    setInterval(aplicarModificacoes, 2500);
   };
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', iniciarObservador);
+    document.addEventListener('DOMContentLoaded', iniciar);
   } else {
-    iniciarObservador();
+    iniciar();
   }
 })();
