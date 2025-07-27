@@ -1,22 +1,14 @@
+<script>
+(function () {
+  // Lista de tamanhos alvo e a ação que será aplicada
+  const tamanhosAlvo = [
+    { largura: 188, altura: 188, acao: 'ocultar' },
+    { largura: 48, altura: 48, acao: 'ocultar' },
+    // Adicione outros tamanhos e ações aqui
+  ];
 
-modificarPorTamanhoId('188x188', 'ocultar');
-modificarPorTamanhoId('48x48', 'ocultar');  
-
-
-
-
-
-function modificarPorTamanhoId(tamanhoString, acao = 'destacar') {
-  const match = tamanhoString.match(/^(\d+)x(\d+)$/i);
-  if (!match) {
-    alert('⚠️ Formato inválido. Use tipo: 188x198');
-    return;
-  }
-
-  const [largura, altura] = match.slice(1).map(Number);
-  const margemErro = 1; // margem para evitar erro por arredondamento
+  const margemErro = 1; // tolerância em pixels para evitar erro de arredondamento
   const elementos = Array.from(document.querySelectorAll('body *'));
-  let afetados = 0;
 
   const acoes = {
     ocultar: el => el.style.display = 'none',
@@ -46,21 +38,37 @@ function modificarPorTamanhoId(tamanhoString, acao = 'destacar') {
     }
   };
 
-  const acaoFunc = acoes[acao] || acoes.destacar;
+  // Função que verifica e aplica ação nos elementos
+  function aplicarAcoesAutomatica() {
+    let totalAfetados = 0;
 
-  elementos.forEach(el => {
-    const rect = el.getBoundingClientRect();
-    const w = Math.round(rect.width);
-    const h = Math.round(rect.height);
+    elementos.forEach(el => {
+      if (!el.offsetParent) return; // ignora elementos invisíveis
 
-    const larguraMatch = Math.abs(w - largura) <= margemErro;
-    const alturaMatch = Math.abs(h - altura) <= margemErro;
+      const rect = el.getBoundingClientRect();
+      const w = Math.round(rect.width);
+      const h = Math.round(rect.height);
 
-    if (larguraMatch && alturaMatch && el.offsetParent !== null) {
-      acaoFunc(el);
-      afetados++;
-    }
-  });
+      tamanhosAlvo.forEach(tam => {
+        const larguraMatch = Math.abs(w - tam.largura) <= margemErro;
+        const alturaMatch = Math.abs(h - tam.altura) <= margemErro;
 
-  alert(`✅ ${afetados} elemento(s) com tamanho aproximadamente ${largura}x${altura} ${acao}(s)`);
-}
+        if (larguraMatch && alturaMatch) {
+          const acaoFunc = acoes[tam.acao] || acoes.destacar;
+          acaoFunc(el);
+          totalAfetados++;
+        }
+      });
+    });
+
+    console.log(`✅ ${totalAfetados} elemento(s) modificados automaticamente.`);
+  }
+
+  // Aguarda a página carregar completamente
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', aplicarAcoesAutomatica);
+  } else {
+    aplicarAcoesAutomatica();
+  }
+})();
+</script>
