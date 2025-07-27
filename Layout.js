@@ -1,9 +1,3 @@
-
-javascript:(function(){var s=document.createElement('script');s.src='https://phonejs.github.io/PhoneJS/Layout.js';document.body.appendChild(s);})()
-
-
-
-
 javascript:(function () {
   const HISTORICO_ALVO = "188x188,133x24,97x24,491x48";
 
