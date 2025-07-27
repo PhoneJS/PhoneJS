@@ -1,5 +1,5 @@
 (function () {
-  const HISTORICO_ALVO = "188x188,133x24,97x24,24x24,22x22"; // ← Tamanhos desejados
+  const HISTORICO_ALVO = "188x188,133x24,97x24,24x24,22x22";
 
   const tamanhosAlvo = HISTORICO_ALVO.split(',').map(t => {
     const [w, h] = t.split('x').map(n => parseInt(n.trim()));
@@ -8,7 +8,6 @@
 
   const classesDetectadas = new Set();
 
-  // Função utilitária para extrair classes (inclusive SVG)
   function getClassList(el) {
     if (!el) return [];
     try {
@@ -21,30 +20,42 @@
     return [];
   }
 
-  // Etapa 1: Detectar elementos com tamanho correspondente
+  // Etapa 1: Detectar classes de elementos com tamanho alvo
   document.querySelectorAll('*').forEach(el => {
     const rect = el.getBoundingClientRect();
     const largura = Math.round(rect.width);
     const altura = Math.round(rect.height);
 
     const corresponde = tamanhosAlvo.some(t => t.largura === largura && t.altura === altura);
-
     if (corresponde) {
       const classes = getClassList(el);
       classes.forEach(cls => classesDetectadas.add(cls));
     }
   });
 
-  // Etapa 2: Reduzir todos os elementos com as classes detectadas
+  // Etapa 2: Forçar edição de estilo para todos os que têm classes detectadas
   document.querySelectorAll('*').forEach(el => {
     const classes = getClassList(el);
     const match = classes.some(cls => classesDetectadas.has(cls));
+
     if (match) {
-      el.style.width = '1px';
-      el.style.height = '1px';
-      el.style.overflow = 'hidden';
+      // Estilo visual
+      el.style.setProperty('width', '1px', 'important');
+      el.style.setProperty('height', '1px', 'important');
+      el.style.setProperty('overflow', 'hidden', 'important');
+      el.style.setProperty('min-width', '1px', 'important');
+      el.style.setProperty('min-height', '1px', 'important');
+      el.style.setProperty('max-width', '1px', 'important');
+      el.style.setProperty('max-height', '1px', 'important');
+      el.style.setProperty('display', 'block', 'important'); // força modo redimensionável
+
+      // Ajuste direto no SVG (se aplicável)
+      if (el.tagName.toLowerCase() === 'svg') {
+        el.setAttribute('width', '1');
+        el.setAttribute('height', '1');
+      }
     }
   });
 
-  alert('🧠 Elementos com classes e tamanhos alvo foram reduzidos para 1px!');
+  alert('✅ Elementos com classes detectadas foram forçados a 1px!');
 })();
